@@ -12,7 +12,7 @@ export const authHelpers = {
     try {
       // Different redirect URI for different platforms
       let redirectTo: string;
-      
+
       if (Platform.OS === 'web') {
         // For web browser, use the current origin
         redirectTo = `${window.location.origin}/auth/callback`;
@@ -24,10 +24,16 @@ export const authHelpers = {
         });
       }
 
+      console.log('Redirect URI:', redirectTo);
+      const redirectUri = makeRedirectUri({
+        scheme: 'ternakin',
+        path: 'auth/callback'
+      });
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo,
+          redirectTo: redirectUri,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -35,8 +41,13 @@ export const authHelpers = {
         },
       });
 
+      if (error) {
+        console.error('Google OAuth error:', error);
+      }
+
       return { data, error };
     } catch (error: any) {
+      console.error('Google OAuth exception:', error);
       return { data: null, error: error.message };
     }
   },
@@ -45,7 +56,7 @@ export const authHelpers = {
   async signInWithOTP(email: string) {
     try {
       let redirectTo: string;
-      
+
       if (Platform.OS === 'web') {
         redirectTo = `${window.location.origin}/auth/callback`;
       } else {
@@ -129,7 +140,7 @@ export const authHelpers = {
   // Reset password
   async resetPassword(email: string) {
     let redirectTo: string;
-    
+
     if (Platform.OS === 'web') {
       redirectTo = `${window.location.origin}/auth/reset-password`;
     } else {
@@ -187,6 +198,7 @@ export const useAuth = () => {
     // Listen for auth changes
     const { data: { subscription } } = authHelpers.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setUser(session?.user || null);
         setLoading(false);
         setError(null);
@@ -199,9 +211,11 @@ export const useAuth = () => {
   const signInWithGoogle = async () => {
     setLoading(true);
     setError(null);
+    console.log('Starting Google OAuth...');
     const result = await authHelpers.signInWithGoogle();
     if (result.error) {
-      setError(result.error);
+      console.error('Google OAuth failed:', result.error);
+      setError(result.error.message);
     }
     setLoading(false);
     return result;
@@ -212,7 +226,7 @@ export const useAuth = () => {
     setError(null);
     const result = await authHelpers.signInWithOTP(email);
     if (result.error) {
-      setError(result.error);
+      setError(result.error?.message ?? null);
     }
     setLoading(false);
     return result;
@@ -223,7 +237,7 @@ export const useAuth = () => {
     setError(null);
     const result = await authHelpers.verifyOTP(email, token);
     if (result.error) {
-      setError(result.error);
+      setError(result.error?.message ?? null);
     }
     setLoading(false);
     return result;
@@ -233,7 +247,7 @@ export const useAuth = () => {
     setLoading(true);
     const result = await authHelpers.signOut();
     if (result.error) {
-      setError(result.error);
+      setError(result.error?.message ?? null);
     }
     setLoading(false);
     return result;

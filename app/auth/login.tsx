@@ -28,13 +28,19 @@ export default function LoginScreen() {
 
   const handleGoogleLogin = async () => {
     try {
+      console.log('Starting Google login...');
       const result = await signInWithGoogle();
+      console.log('Google login result:', result);
+      
       if (result.data && !result.error) {
+        console.log('Google login successful, redirecting...');
         router.replace('/(tabs)/dashboard');
       } else if (result.error) {
+        console.error('Google login error:', result.error);
         Alert.alert(t('common.error'), result.error);
       }
     } catch (error: any) {
+      console.error('Google login exception:', error);
       Alert.alert(t('common.error'), error.message || 'Something went wrong');
     }
   };

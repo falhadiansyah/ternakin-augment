@@ -2,8 +2,8 @@ import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useAuthContext } from './AuthProvider';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BurgerMenu } from './BurgerMenu';
 import { useLanguage } from './LanguageProvider';
 import { useTheme } from './ThemeProvider';
 import Modal from './ui/Modal';
@@ -15,49 +15,29 @@ interface HeaderProps {
 }
 
 export function Header({ title, showBackButton = false, onBackPress }: HeaderProps) {
-  const { signOut } = useAuthContext();
-  const { theme, setTheme, isDark } = useTheme();
-  const { language, setLanguage, t } = useLanguage();
-  const [showSettings, setShowSettings] = useState(false);
+  const { isDark } = useTheme();
+  const { t } = useLanguage();
+  const [showBurgerMenu, setShowBurgerMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
   const colors = Colors[isDark ? 'dark' : 'light'];
 
-  const handleLogout = () => {
-    Alert.alert(
-      t('auth.logout'),
-      'Are you sure you want to logout?',
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('auth.logout'),
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-            router.replace('/auth/login');
-          },
-        },
-      ]
-    );
-  };
-
-  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
-    setTheme(newTheme);
-  };
-
-  const handleLanguageChange = (newLanguage: 'en' | 'id') => {
-    setLanguage(newLanguage);
-  };
-
   return (
     <View style={[styles.header, { backgroundColor: colors.background }]}>
       <View style={styles.leftSection}>
-        {showBackButton && (
+        {showBackButton ? (
           <TouchableOpacity
             style={styles.backButton}
             onPress={onBackPress || (() => router.back())}
           >
             <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.burgerButton}
+            onPress={() => setShowBurgerMenu(true)}
+          >
+            <Ionicons name="menu" size={24} color={colors.text} />
           </TouchableOpacity>
         )}
         {title && (
@@ -68,28 +48,6 @@ export function Header({ title, showBackButton = false, onBackPress }: HeaderPro
       </View>
 
       <View style={styles.rightSection}>
-        {/* Theme Toggle */}
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => setShowSettings(true)}
-        >
-          <Ionicons 
-            name={isDark ? 'moon' : 'sunny'} 
-            size={24} 
-            color={colors.text} 
-          />
-        </TouchableOpacity>
-
-        {/* Language Toggle */}
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => handleLanguageChange(language === 'en' ? 'id' : 'en')}
-        >
-          <Text style={[styles.languageText, { color: colors.text }]}>
-            {language.toUpperCase()}
-          </Text>
-        </TouchableOpacity>
-
         {/* Notifications */}
         <TouchableOpacity
           style={styles.iconButton}
@@ -97,72 +55,13 @@ export function Header({ title, showBackButton = false, onBackPress }: HeaderPro
         >
           <Ionicons name="notifications-outline" size={24} color={colors.text} />
         </TouchableOpacity>
-
-        {/* Logout */}
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={handleLogout}
-        >
-          <Ionicons name="log-out-outline" size={24} color={colors.text} />
-        </TouchableOpacity>
       </View>
 
-      {/* Settings Modal */}
-      <Modal
-        visible={showSettings}
-        onClose={() => setShowSettings(false)}
-        title={t('settings.theme')}
-      >
-        <View style={styles.modalContent}>
-          <TouchableOpacity
-            style={[
-              styles.option,
-              theme === 'light' && { backgroundColor: colors.primary + '20' }
-            ]}
-            onPress={() => handleThemeChange('light')}
-          >
-            <Ionicons name="sunny" size={20} color={colors.text} />
-            <Text style={[styles.optionText, { color: colors.text }]}>
-              {t('settings.light_mode')}
-            </Text>
-            {theme === 'light' && (
-              <Ionicons name="checkmark" size={20} color={colors.primary} />
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.option,
-              theme === 'dark' && { backgroundColor: colors.primary + '20' }
-            ]}
-            onPress={() => handleThemeChange('dark')}
-          >
-            <Ionicons name="moon" size={20} color={colors.text} />
-            <Text style={[styles.optionText, { color: colors.text }]}>
-              {t('settings.dark_mode')}
-            </Text>
-            {theme === 'dark' && (
-              <Ionicons name="checkmark" size={20} color={colors.primary} />
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.option,
-              theme === 'system' && { backgroundColor: colors.primary + '20' }
-            ]}
-            onPress={() => handleThemeChange('system')}
-          >
-            <Ionicons name="settings" size={20} color={colors.text} />
-            <Text style={[styles.optionText, { color: colors.text }]}>
-              {t('settings.system')}
-            </Text>
-            {theme === 'system' && (
-              <Ionicons name="checkmark" size={20} color={colors.primary} />
-            )}
-          </TouchableOpacity>
-        </View>
-      </Modal>
+      {/* Burger Menu */}
+      <BurgerMenu
+        visible={showBurgerMenu}
+        onClose={() => setShowBurgerMenu(false)}
+      />
 
       {/* Notifications Modal */}
       <Modal
@@ -199,6 +98,10 @@ const styles = StyleSheet.create({
     marginRight: 12,
     padding: 4,
   },
+  burgerButton: {
+    marginRight: 12,
+    padding: 4,
+  },
   title: {
     fontSize: 18,
     fontWeight: '600',
@@ -211,25 +114,8 @@ const styles = StyleSheet.create({
     padding: 8,
     marginLeft: 8,
   },
-  languageText: {
-    fontSize: 14,
-    fontWeight: '600',
-    paddingHorizontal: 4,
-  },
   modalContent: {
     padding: 16,
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  optionText: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
   },
   notificationText: {
     textAlign: 'center',

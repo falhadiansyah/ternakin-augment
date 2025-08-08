@@ -15,6 +15,8 @@ export default function AuthCallbackScreen() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        console.log('Handling auth callback...');
+        
         // Get the session from the URL or storage
         const { data: { session }, error } = await supabase.auth.getSession();
         
@@ -24,15 +26,19 @@ export default function AuthCallbackScreen() {
           return;
         }
 
+        console.log('Session found:', !!session, session?.user?.email);
+
         if (session) {
           // Successfully authenticated
+          console.log('Redirecting to dashboard...');
           router.replace('/(tabs)/dashboard');
         } else {
           // No session found, redirect to login
+          console.log('No session found, redirecting to login...');
           router.replace('/auth/login');
         }
       } catch (error) {
-        console.error('Auth callback error:', error);
+        console.error('Auth callback exception:', error);
         router.replace('/auth/login');
       }
     };
