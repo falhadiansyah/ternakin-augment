@@ -1,6 +1,7 @@
 import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -9,13 +10,28 @@ export const authHelpers = {
   // Sign in with Google OAuth
   async signInWithGoogle() {
     try {
+      // Different redirect URI for different platforms
+      let redirectTo: string;
+      
+      if (Platform.OS === 'web') {
+        // For web browser, use the current origin
+        redirectTo = `${window.location.origin}/auth/callback`;
+      } else {
+        // For mobile (iOS/Android), use the app scheme
+        redirectTo = makeRedirectUri({
+          scheme: 'ternakin',
+          path: 'auth/callback',
+        });
+      }
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: makeRedirectUri({
-            scheme: 'ternakin',
-            path: 'auth/callback',
-          }),
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
 
@@ -28,13 +44,21 @@ export const authHelpers = {
   // Sign in with email OTP
   async signInWithOTP(email: string) {
     try {
+      let redirectTo: string;
+      
+      if (Platform.OS === 'web') {
+        redirectTo = `${window.location.origin}/auth/callback`;
+      } else {
+        redirectTo = makeRedirectUri({
+          scheme: 'ternakin',
+          path: 'auth/callback',
+        });
+      }
+
       const { data, error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: makeRedirectUri({
-            scheme: 'ternakin',
-            path: 'auth/callback',
-          }),
+          emailRedirectTo: redirectTo,
         },
       });
 
@@ -104,8 +128,16 @@ export const authHelpers = {
 
   // Reset password
   async resetPassword(email: string) {
+    let redirectTo: string;
+    
+    if (Platform.OS === 'web') {
+      redirectTo = `${window.location.origin}/auth/reset-password`;
+    } else {
+      redirectTo = 'ternakin://auth/reset-password';
+    }
+
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'ternakin://auth/reset-password',
+      redirectTo,
     });
 
     return { data, error };

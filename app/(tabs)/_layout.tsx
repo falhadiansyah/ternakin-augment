@@ -1,28 +1,31 @@
 import AuthGuard from '@/components/AuthGuard';
+import { useLanguage } from '@/components/LanguageProvider';
+import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { isDark } = useTheme();
+  const { t } = useLanguage();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   return (
     <AuthGuard>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          tabBarActiveTintColor: colors.tint,
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: Colors[colorScheme ?? 'light'].background,
-            borderTopColor: Colors[colorScheme ?? 'light'].tabIconDefault,
+            backgroundColor: colors.background,
+            borderTopColor: colors.tabIconDefault,
             borderTopWidth: 1,
           },
         }}>
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Dashboard',
+          title: t('nav.dashboard'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'analytics' : 'analytics-outline'}
@@ -35,7 +38,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="livestock"
         options={{
-          title: 'Livestock',
+          title: t('nav.livestock'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'paw' : 'paw-outline'}
@@ -48,7 +51,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="feeding"
         options={{
-          title: 'Feeding',
+          title: t('nav.feeding'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'nutrition' : 'nutrition-outline'}
@@ -61,7 +64,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="financial"
         options={{
-          title: 'Financial',
+          title: t('nav.financial'),
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'wallet' : 'wallet-outline'}

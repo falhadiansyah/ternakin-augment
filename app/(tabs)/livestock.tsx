@@ -1,25 +1,20 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Header } from '@/components/Header';
+import { useLanguage } from '@/components/LanguageProvider';
+import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LivestockScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { isDark } = useTheme();
+  const { t } = useLanguage();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Header title={t('nav.livestock')} />
       <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Livestock Management
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.icon }]}>
-            Manage your livestock batches and animals
-          </Text>
-        </View>
-
         <View style={styles.content}>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
@@ -60,21 +55,8 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  header: {
-    padding: 20,
-    paddingBottom: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-  },
   content: {
     padding: 20,
-    paddingTop: 10,
   },
   card: {
     padding: 20,

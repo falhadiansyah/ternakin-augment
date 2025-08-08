@@ -1,20 +1,29 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { InputProps } from '@/types/app';
+import React from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-export default function Input({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  error,
+interface InputProps {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  error?: string;
+  multiline?: boolean;
+  keyboardType?: 'default' | 'numeric' | 'email-address';
+}
+
+export default function Input({ 
+  label, 
+  value, 
+  onChangeText, 
+  placeholder, 
+  error, 
   multiline = false,
-  keyboardType = 'default',
+  keyboardType = 'default'
 }: InputProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   return (
     <View style={styles.container}>
@@ -22,23 +31,22 @@ export default function Input({
       <TextInput
         style={[
           styles.input,
-          multiline && styles.multilineInput,
-          {
+          { 
             backgroundColor: colors.card,
-            borderColor: error ? colors.error : colors.border,
+            borderColor: error ? '#dc2626' : colors.border,
             color: colors.text,
-          },
+          }
         ]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={colors.icon}
         multiline={multiline}
-        numberOfLines={multiline ? 4 : 1}
-        textAlignVertical={multiline ? 'top' : 'center'}
         keyboardType={keyboardType}
       />
-      {error && <Text style={[styles.error, { color: colors.error }]}>{error}</Text>}
+      {error && (
+        <Text style={styles.errorText}>{error}</Text>
+      )}
     </View>
   );
 }
@@ -59,11 +67,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 48,
   },
-  multilineInput: {
-    minHeight: 100,
-    paddingTop: 12,
-  },
-  error: {
+  errorText: {
+    color: '#dc2626',
     fontSize: 14,
     marginTop: 4,
   },

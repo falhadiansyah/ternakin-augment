@@ -1,7 +1,8 @@
 import { useAuthContext } from '@/components/AuthProvider';
+import { useLanguage } from '@/components/LanguageProvider';
+import { useTheme } from '@/components/ThemeProvider';
 import { Button, Input, Loading } from '@/components/ui';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -9,8 +10,9 @@ import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpaci
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { isDark } = useTheme();
+  const { t } = useLanguage();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   const { signInWithGoogle, signInWithOTP, verifyOTP, loading, error } = useAuthContext();
 
   const [email, setEmail] = useState('');
@@ -30,10 +32,10 @@ export default function LoginScreen() {
       if (result.data && !result.error) {
         router.replace('/(tabs)/dashboard');
       } else if (result.error) {
-        Alert.alert('Login Error', result.error);
+        Alert.alert(t('common.error'), result.error);
       }
     } catch (error: any) {
-      Alert.alert('Login Error', error.message || 'Something went wrong');
+      Alert.alert(t('common.error'), error.message || 'Something went wrong');
     }
   };
 
@@ -54,12 +56,12 @@ export default function LoginScreen() {
       const result = await signInWithOTP(email);
       if (result.data && !result.error) {
         setStep('otp');
-        Alert.alert('OTP Sent', 'Please check your email for the verification code');
+        Alert.alert(t('auth.otp_sent'), t('auth.otp_sent_message'));
       } else if (result.error) {
-        Alert.alert('Error', result.error);
+        Alert.alert(t('common.error'), result.error);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send OTP');
+      Alert.alert(t('common.error'), error.message || 'Failed to send OTP');
     }
   };
 
@@ -97,7 +99,7 @@ export default function LoginScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Loading message="Authenticating..." />
+        <Loading message={t('common.loading')} />
       </SafeAreaView>
     );
   }
@@ -119,27 +121,27 @@ export default function LoginScreen() {
       >
         <View style={styles.logoContainer}>
           <Text style={[styles.logo, { color: colors.primary }]}>
-            Ternakin
+            {t('app.name')}
           </Text>
           <Text style={[styles.tagline, { color: colors.icon }]}>
-            Livestock Management Made Simple
+            {t('app.tagline')}
           </Text>
         </View>
 
         {step === 'email' ? (
           <View style={styles.formContainer}>
             <Input
-              label="Email Address"
+              label={t('auth.email')}
               value={email}
               onChangeText={setEmail}
-              placeholder="Enter your email"
+              placeholder={t('auth.email_placeholder')}
               keyboardType="email-address"
               error={emailError}
             />
 
             <View style={styles.buttonContainer}>
               <Button
-                title="Send OTP"
+                title={t('auth.send_otp')}
                 onPress={handleEmailOTP}
                 loading={loading}
               />
@@ -157,7 +159,7 @@ export default function LoginScreen() {
               >
                 <Ionicons name="logo-google" size={20} color="#4285F4" />
                 <Text style={[styles.buttonText, { color: colors.text }]}>
-                  Continue with Google
+                  {t('auth.continue_with_google')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -165,24 +167,24 @@ export default function LoginScreen() {
         ) : (
           <View style={styles.formContainer}>
             <Text style={[styles.otpTitle, { color: colors.text }]}>
-              Verify Your Email
+              {t('auth.verify_email')}
             </Text>
             <Text style={[styles.otpSubtitle, { color: colors.icon }]}>
-              We sent a 6-digit code to {email}
+              {t('auth.otp_sent_to')} {email}
             </Text>
 
             <Input
               label="Verification Code"
               value={otp}
               onChangeText={setOtp}
-              placeholder="Enter 6-digit code"
+              placeholder={t('auth.otp_placeholder')}
               keyboardType="numeric"
               error={otpError}
             />
 
             <View style={styles.buttonContainer}>
               <Button
-                title="Verify Code"
+                title={t('auth.verify_code')}
                 onPress={handleVerifyOTP}
                 loading={loading}
               />
@@ -192,7 +194,7 @@ export default function LoginScreen() {
                 onPress={handleBackToEmail}
               >
                 <Text style={[styles.backButtonText, { color: colors.primary }]}>
-                  Back to Email
+                  {t('auth.back_to_email')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -200,7 +202,7 @@ export default function LoginScreen() {
         )}
 
         <Text style={[styles.disclaimer, { color: colors.icon }]}>
-          By continuing, you agree to our Terms of Service and Privacy Policy
+          {t('auth.terms_disclaimer')}
         </Text>
       </KeyboardAvoidingView>
     </SafeAreaView>

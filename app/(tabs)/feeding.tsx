@@ -1,50 +1,45 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Header } from '@/components/Header';
+import { useLanguage } from '@/components/LanguageProvider';
+import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FeedingScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { isDark } = useTheme();
+  const { t } = useLanguage();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Header title={t('nav.feeding')} />
       <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Feeding Management
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.icon }]}>
-            Manage feed types, recipes, and daily requirements
-          </Text>
-        </View>
-
         <View style={styles.content}>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Daily Requirements
+              Feeding Schedule
             </Text>
             <Text style={[styles.cardSubtitle, { color: colors.icon }]}>
-              Today's feed and water requirements for all batches
+              Manage daily feeding routines
             </Text>
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Feed Types & Recipes
+              Feed Types
             </Text>
             <Text style={[styles.cardSubtitle, { color: colors.icon }]}>
-              Manage feed types and custom feed mixes
+              Configure different feed types and recipes
             </Text>
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Feeding Schedules
+              Feed Inventory
             </Text>
             <Text style={[styles.cardSubtitle, { color: colors.icon }]}>
-              Set up feeding schedules for livestock batches
+              Track feed stock and consumption
             </Text>
           </View>
         </View>
@@ -60,21 +55,8 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  header: {
-    padding: 20,
-    paddingBottom: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-  },
   content: {
     padding: 20,
-    paddingTop: 10,
   },
   card: {
     padding: 20,

@@ -1,50 +1,202 @@
-# Welcome to your Expo app 👋
+# Ternakin - Livestock Management App 🐄
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A modern livestock management application built with React Native, Expo, and Supabase.
 
-## Get started
+## Features ✨
 
-1. Install dependencies
+### Authentication
+- **Email OTP Login**: Secure login with email verification
+- **Google OAuth**: Sign in with Google account
+- **Multi-platform Support**: Works on Web, iOS, and Android
 
+### User Interface
+- **Dark/Light Theme**: Toggle between dark and light modes
+- **Multi-language Support**: English and Indonesian
+- **Responsive Design**: Optimized for all screen sizes
+
+### Navigation
+- **Tab-based Navigation**: Easy access to all features
+- **Header with Actions**: Logout, theme toggle, language switch, and notifications
+- **Profile Management**: User profile and farm details
+
+### Core Features
+- **Dashboard**: Overview of livestock metrics
+- **Livestock Management**: Track your animals
+- **Feeding Schedule**: Manage feeding routines
+- **Financial Tracking**: Monitor income and expenses
+
+## Getting Started 🚀
+
+### Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn
+- Expo CLI
+- Supabase account
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd ternakin
+   ```
+
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. Start the app
+3. **Configure Supabase**
+   - Create a new Supabase project
+   - Copy your project URL and anon key
+   - Update `lib/supabase.ts` with your credentials
 
+4. **Setup OAuth (Optional)**
+   - Follow the guide in `SUPABASE_OAUTH_SETUP.md`
+   - Configure Google OAuth for enhanced login experience
+
+5. **Start the development server**
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## Development 🛠️
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+### Project Structure
+```
+ternakin/
+├── app/                    # App screens and navigation
+├── components/             # Reusable components
+│   ├── ui/                # UI components
+│   ├── AuthProvider.tsx   # Authentication context
+│   ├── ThemeProvider.tsx  # Theme management
+│   └── LanguageProvider.tsx # Internationalization
+├── lib/                   # Utilities and configurations
+├── constants/             # App constants
+└── types/                 # TypeScript type definitions
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Key Components
 
-## Learn more
+#### Authentication
+- `AuthProvider`: Manages user authentication state
+- `AuthGuard`: Protects routes from unauthorized access
+- `useAuthContext`: Hook for authentication functions
 
-To learn more about developing your project with Expo, look at the following resources:
+#### Theme Management
+- `ThemeProvider`: Manages dark/light theme
+- `useTheme`: Hook for theme state and functions
+- Supports system, light, and dark modes
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+#### Internationalization
+- `LanguageProvider`: Manages app language
+- `useLanguage`: Hook for translation functions
+- Supports English and Indonesian
 
-## Join the community
+#### UI Components
+- `Header`: Main navigation header with actions
+- `Button`, `Input`, `Modal`: Reusable UI components
+- Responsive and theme-aware design
 
-Join our community of developers creating universal apps.
+### Available Scripts
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+# Start development server
+npm start
+
+# Run on iOS simulator
+npm run ios
+
+# Run on Android emulator
+npm run android
+
+# Run on web
+npm run web
+
+# Build for production
+npm run build
+```
+
+## Configuration ⚙️
+
+### Environment Variables
+Create a `.env` file in the root directory:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Supabase Setup
+1. Create tables as defined in `lib/database-schema.sql`
+2. Apply RLS policies from `lib/rls-policies.sql`
+3. Configure authentication providers in Supabase dashboard
+
+## Features in Detail 📋
+
+### Authentication System
+- **Email OTP**: Secure one-time password via email
+- **Google OAuth**: Social login with Google
+- **Session Management**: Automatic session handling
+- **Logout**: Secure logout with confirmation
+
+### Theme System
+- **Dark Mode**: Eye-friendly dark theme
+- **Light Mode**: Clean light theme
+- **System Mode**: Follows device settings
+- **Persistent**: Remembers user preference
+
+### Language System
+- **English**: Default language
+- **Indonesian**: Localized content
+- **Easy Toggle**: Quick language switch
+- **Persistent**: Remembers user preference
+
+### Navigation Features
+- **Header Actions**: 
+  - Theme toggle (sun/moon icon)
+  - Language switch (EN/ID)
+  - Notifications (bell icon)
+  - Logout (logout icon)
+- **Tab Navigation**: Dashboard, Livestock, Feeding, Financial
+- **Profile Access**: Quick access to user profile
+
+## Troubleshooting 🔧
+
+### Common Issues
+
+1. **Google OAuth not working**
+   - Check `SUPABASE_OAUTH_SETUP.md`
+   - Verify redirect URIs configuration
+   - Ensure proper Supabase setup
+
+2. **Theme not persisting**
+   - Check AsyncStorage permissions
+   - Verify ThemeProvider implementation
+
+3. **Language not changing**
+   - Check LanguageProvider setup
+   - Verify translation keys
+
+4. **Build errors**
+   - Clear cache: `npx expo start --clear`
+   - Reinstall dependencies: `npm install`
+
+## Contributing 🤝
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License 📄
+
+This project is licensed under the MIT License.
+
+## Support 💬
+
+For support and questions:
+- Create an issue in the repository
+- Check the documentation
+- Review troubleshooting guide

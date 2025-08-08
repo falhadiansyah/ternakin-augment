@@ -1,65 +1,52 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { ButtonProps } from '@/types/app';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
+
+interface ButtonProps {
+  title: string;
+  onPress: () => void;
+  variant?: 'primary' | 'secondary' | 'danger';
+  disabled?: boolean;
+  loading?: boolean;
+}
 
 export default function Button({ 
   title, 
   onPress, 
   variant = 'primary', 
-  disabled = false, 
+  disabled = false,
   loading = false 
 }: ButtonProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   const getButtonStyle = () => {
-    const baseStyle = [styles.button];
-    
-    if (disabled || loading) {
-      baseStyle.push({ opacity: 0.6 });
+    if (disabled) {
+      return [styles.button, { backgroundColor: colors.border }];
     }
 
     switch (variant) {
-      case 'primary':
-        baseStyle.push({ backgroundColor: colors.primary });
-        break;
       case 'secondary':
-        baseStyle.push({ 
-          backgroundColor: colors.secondary, 
-          borderWidth: 1, 
-          borderColor: colors.border 
-        });
-        break;
+        return [styles.button, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }];
       case 'danger':
-        baseStyle.push({ backgroundColor: colors.error });
-        break;
+        return [styles.button, { backgroundColor: '#dc2626' }];
       default:
-        baseStyle.push({ backgroundColor: colors.primary });
+        return [styles.button, { backgroundColor: colors.primary }];
     }
-
-    return baseStyle;
   };
 
   const getTextStyle = () => {
-    const baseStyle = [styles.text];
-    
-    switch (variant) {
-      case 'primary':
-        baseStyle.push({ color: 'white' });
-        break;
-      case 'secondary':
-        baseStyle.push({ color: colors.text });
-        break;
-      case 'danger':
-        baseStyle.push({ color: 'white' });
-        break;
-      default:
-        baseStyle.push({ color: 'white' });
+    if (disabled) {
+      return [styles.text, { color: colors.icon }];
     }
 
-    return baseStyle;
+    switch (variant) {
+      case 'secondary':
+        return [styles.text, { color: colors.text }];
+      default:
+        return [styles.text, { color: 'white' }];
+    }
   };
 
   return (
@@ -70,10 +57,7 @@ export default function Button({
       activeOpacity={0.8}
     >
       {loading ? (
-        <ActivityIndicator 
-          color={variant === 'secondary' ? colors.primary : 'white'} 
-          size="small" 
-        />
+        <ActivityIndicator size="small" color="white" />
       ) : (
         <Text style={getTextStyle()}>{title}</Text>
       )}
@@ -83,9 +67,9 @@ export default function Button({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,

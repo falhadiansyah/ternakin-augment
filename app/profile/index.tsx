@@ -1,6 +1,7 @@
 import { useAuthContext } from '@/components/AuthProvider';
+import { useLanguage } from '@/components/LanguageProvider';
+import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -8,8 +9,9 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { isDark } = useTheme();
+  const { t } = useLanguage();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   const { user, signOut } = useAuthContext();
 
   const handleFarmDetails = () => {
@@ -23,22 +25,22 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     Alert.alert(
-      'Logout',
+      t('auth.logout'),
       'Are you sure you want to logout?',
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Logout',
+          text: t('auth.logout'),
           style: 'destructive',
           onPress: async () => {
             try {
               await signOut();
               router.replace('/auth/login');
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to logout');
+              Alert.alert(t('common.error'), error.message || 'Failed to logout');
             }
           },
         },
@@ -49,7 +51,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('nav.profile')}</Text>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => router.back()}
@@ -127,9 +129,9 @@ export default function ProfileScreen() {
             onPress={handleLogout}
           >
             <View style={styles.menuItemLeft}>
-              <Ionicons name="log-out" size={20} color={colors.error} />
-              <Text style={[styles.menuItemText, { color: colors.error }]}>
-                Logout
+              <Ionicons name="log-out" size={20} color="#dc2626" />
+              <Text style={[styles.menuItemText, { color: '#dc2626' }]}>
+                {t('auth.logout')}
               </Text>
             </View>
           </TouchableOpacity>

@@ -1,21 +1,20 @@
+import { useTheme } from '@/components/ThemeProvider';
+import { Colors } from '@/constants/Colors';
+import { ModalProps } from '@/types/app';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-  Modal as RNModal,
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  TouchableWithoutFeedback,
+    Modal as RNModal,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { ModalProps } from '@/types/app';
 
 export default function Modal({ visible, onClose, title, children }: ModalProps) {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { isDark } = useTheme();
+  const colors = Colors[isDark ? 'dark' : 'light'];
 
   return (
     <RNModal

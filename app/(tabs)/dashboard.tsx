@@ -1,6 +1,8 @@
 import { useAuthContext } from '@/components/AuthProvider';
+import { Header } from '@/components/Header';
+import { useLanguage } from '@/components/LanguageProvider';
+import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -8,8 +10,9 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DashboardScreen() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
+  const { isDark } = useTheme();
+  const { t } = useLanguage();
+  const colors = Colors[isDark ? 'dark' : 'light'];
   const { user } = useAuthContext();
 
   const handleProfilePress = () => {
@@ -18,16 +21,12 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Header title={t('nav.dashboard')} />
       <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={[styles.title, { color: colors.text }]}>
-              Livestock Dashboard
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.icon }]}>
-              Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
-            </Text>
-          </View>
+        <View style={styles.welcomeSection}>
+          <Text style={[styles.welcomeText, { color: colors.text }]}>
+            Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'}
+          </Text>
           <TouchableOpacity
             style={[styles.profileButton, { backgroundColor: colors.primary }]}
             onPress={handleProfilePress}
@@ -76,14 +75,15 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  header: {
+  welcomeSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     padding: 20,
     paddingBottom: 10,
   },
-  headerLeft: {
+  welcomeText: {
+    fontSize: 16,
     flex: 1,
   },
   profileButton: {
@@ -93,14 +93,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
   },
   content: {
     padding: 20,
