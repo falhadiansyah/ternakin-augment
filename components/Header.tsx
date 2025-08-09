@@ -1,4 +1,6 @@
 import { Colors } from '@/constants/Colors';
+import { Radii, Shadows, Spacing } from '@/constants/Design';
+import { Typography } from '@/constants/Typography';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
@@ -21,23 +23,24 @@ export function Header({ title, showBackButton = false, onBackPress }: HeaderPro
   const [showNotifications, setShowNotifications] = useState(false);
 
   const colors = Colors[isDark ? 'dark' : 'light'];
+  const shadow = Shadows(isDark);
 
   return (
-    <View style={[styles.header, { backgroundColor: colors.background }]}>
+    <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }, shadow]}>
       <View style={styles.leftSection}>
         {showBackButton ? (
           <TouchableOpacity
             style={styles.backButton}
             onPress={onBackPress || (() => router.back())}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={styles.burgerButton}
             onPress={() => setShowBurgerMenu(true)}
           >
-            <Ionicons name="menu" size={24} color={colors.text} />
+            <Ionicons name="menu" size={22} color={colors.text} />
           </TouchableOpacity>
         )}
         {title && (
@@ -53,7 +56,7 @@ export function Header({ title, showBackButton = false, onBackPress }: HeaderPro
           style={styles.iconButton}
           onPress={() => setShowNotifications(true)}
         >
-          <Ionicons name="notifications-outline" size={24} color={colors.text} />
+          <Ionicons name="notifications-outline" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -84,10 +87,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+    borderRadius: Radii.md,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
   },
   leftSection: {
     flexDirection: 'row',
@@ -95,16 +101,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backButton: {
-    marginRight: 12,
+    marginRight: Spacing.sm,
     padding: 4,
   },
   burgerButton: {
-    marginRight: 12,
+    marginRight: Spacing.sm,
     padding: 4,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: Typography.headline,
+    fontWeight: Typography.weight.bold,
   },
   rightSection: {
     flexDirection: 'row',
@@ -115,11 +121,11 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   modalContent: {
-    padding: 16,
+    padding: Spacing.md,
   },
   notificationText: {
     textAlign: 'center',
-    fontSize: 16,
+    fontSize: Typography.body,
     fontStyle: 'italic',
   },
 });

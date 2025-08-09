@@ -1,7 +1,7 @@
 import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 interface ButtonProps {
   title: string;
@@ -11,21 +11,18 @@ interface ButtonProps {
   loading?: boolean;
 }
 
-export default function Button({ 
-  title, 
-  onPress, 
-  variant = 'primary', 
+export default function Button({
+  title,
+  onPress,
+  variant = 'primary',
   disabled = false,
-  loading = false 
+  loading = false,
 }: ButtonProps) {
   const { isDark } = useTheme();
   const colors = Colors[isDark ? 'dark' : 'light'];
 
-  const getButtonStyle = () => {
-    if (disabled) {
-      return [styles.button, { backgroundColor: colors.border }];
-    }
-
+  const baseStyle = () => {
+    if (disabled) return [styles.button, { backgroundColor: colors.border }];
     switch (variant) {
       case 'secondary':
         return [styles.button, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }];
@@ -36,11 +33,8 @@ export default function Button({
     }
   };
 
-  const getTextStyle = () => {
-    if (disabled) {
-      return [styles.text, { color: colors.icon }];
-    }
-
+  const textStyle = () => {
+    if (disabled) return [styles.text, { color: colors.icon }];
     switch (variant) {
       case 'secondary':
         return [styles.text, { color: colors.text }];
@@ -50,18 +44,20 @@ export default function Button({
   };
 
   return (
-    <TouchableOpacity
-      style={getButtonStyle()}
+    <Pressable
+      style={({ pressed }) => [
+        ...baseStyle(),
+        pressed && !disabled ? { opacity: 0.9, transform: [{ scale: 0.98 }] } : null,
+      ]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
     >
       {loading ? (
         <ActivityIndicator size="small" color="white" />
       ) : (
-        <Text style={getTextStyle()}>{title}</Text>
+        <Text style={textStyle()}>{title}</Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 

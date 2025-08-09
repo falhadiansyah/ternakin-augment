@@ -1,8 +1,8 @@
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthContext } from './AuthProvider';
 import { useLanguage } from './LanguageProvider';
 import { useTheme } from './ThemeProvider';
@@ -89,22 +89,31 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
     },
   ];
 
-  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const slideX = useRef(new Animated.Value(-300)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(slideX, { toValue: 0, duration: 220, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    } else {
+      Animated.timing(slideX, { toValue: -300, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start();
+    }
+  }, [visible]);
+  const [expandedItem, setExpandedItem] = React.useState<string | null>(null);
 
   const toggleSubmenu = (itemId: string) => {
-    setExpandedItem(expandedItem === itemId ? null : itemId);
+    setExpandedItem(prev => (prev === itemId ? null : itemId));
   };
 
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="none"
       transparent={true}
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.backdrop} onPress={onClose} />
-        <View style={[styles.menuContainer, { backgroundColor: colors.background }]}>
+        <Animated.View style={[styles.menuContainer, { backgroundColor: colors.background, transform: [{ translateX: slideX }] }]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text }]}>
               {t('app.name')}
@@ -131,14 +140,14 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
                   }}
                 >
                   <View style={styles.menuItemLeft}>
-                    <Ionicons 
-                      name={item.icon as any} 
-                      size={20} 
-                      color={item.danger ? '#dc2626' : colors.text} 
+                    <Ionicons
+                      name={item.icon as any}
+                      size={20}
+                      color={item.danger ? '#dc2626' : colors.text}
                     />
                     <View style={styles.menuItemText}>
                       <Text style={[
-                        styles.menuItemTitle, 
+                        styles.menuItemTitle,
                         { color: item.danger ? '#dc2626' : colors.text }
                       ]}>
                         {item.title}
@@ -151,10 +160,10 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
                     </View>
                   </View>
                   {item.hasSubmenu && (
-                    <Ionicons 
-                      name={expandedItem === item.id ? 'chevron-up' : 'chevron-down'} 
-                      size={20} 
-                      color={colors.icon} 
+                    <Ionicons
+                      name={expandedItem === item.id ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={colors.icon}
                     />
                   )}
                 </TouchableOpacity>
@@ -170,10 +179,10 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
                         ]}
                         onPress={subItem.onPress}
                       >
-                        <Ionicons 
-                          name={subItem.icon as any} 
-                          size={16} 
-                          color={colors.text} 
+                        <Ionicons
+                          name={subItem.icon as any}
+                          size={16}
+                          color={colors.text}
                         />
                         <Text style={[styles.submenuItemText, { color: colors.text }]}>
                           {subItem.title}
@@ -188,7 +197,7 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
               </View>
             ))}
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -218,6 +227,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    transform: [{ translateX: -300 }],
   },
   header: {
     flexDirection: 'row',
