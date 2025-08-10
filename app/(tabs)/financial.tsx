@@ -4,9 +4,10 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
+import { getBalance, listTransactions, type CashbookRow } from '@/lib/data';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FinancialScreen() {
@@ -15,16 +16,37 @@ export default function FinancialScreen() {
   const colors = Colors[isDark ? 'dark' : 'light'];
   const shadow = Shadows(isDark);
 
-  const overview = {
-    totalIncome: 3700,
-    totalExpenses: 1250,
-  };
+  const [transactions, setTransactions] = useState<CashbookRow[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [balance, setBalance] = useState<{ total_balance: number; total_debit: number; total_credit: number } | null>(null);
 
-  const transactions = [
-    { title: 'Livestock Sales', amount: 2500, sign: '+', subtitle: 'Sold 25 broiler chickens', date: '2024-05-15' },
-    { title: 'Feed Purchase', amount: 450, sign: '-', subtitle: 'Bought 100kg broiler feed', date: '2024-05-12' },
-    { title: 'Milk Sales', amount: 1200, sign: '+', subtitle: 'Weekly milk collection', date: '2024-05-10' },
-  ];
+  useEffect(() => {
+    (async () => {
+      const [{ data: tx, error: te }, { data: bal, error: be }] = await Promise.all([
+        listTransactions(20),
+        getBalance(),
+      ]);
+      if (te) setError(te.message);
+      if (be) setError(be.message);
+      setTransactions(tx || []);
+      setBalance(bal || null);
+      setLoading(false);
+    })();
+  }, []);
+
+  const overview = useMemo(() => {
+    if (balance) {
+      return {
+        totalIncome: balance.total_credit,
+        totalExpenses: balance.total_debit,
+      };
+    }
+    // fallback computed from transactions if no balance row yet
+    const income = (transactions || []).reduce((acc, t) => acc + (t.credit || 0), 0);
+    const expenses = (transactions || []).reduce((acc, t) => acc + (t.debit || 0), 0);
+    return { totalIncome: income, totalExpenses: expenses };
+  }, [balance, transactions]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -34,11 +56,11 @@ export default function FinancialScreen() {
           {/* Overview cards */}
           <View style={[styles.overviewCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
             <Text style={[styles.overviewLabel, { color: colors.icon }]}>Total Income</Text>
-            <Text style={[styles.overviewValue, { color: colors.success }]}>${overview.totalIncome.toLocaleString()}</Text>
+            <Text style={[styles.overviewValue, { color: colors.success }]}>${(overview.totalIncome || 0).toLocaleString()}</Text>
           </View>
           <View style={[styles.overviewCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
             <Text style={[styles.overviewLabel, { color: colors.icon }]}>Total Expenses</Text>
-            <Text style={[styles.overviewValue, { color: colors.error }]}>${overview.totalExpenses.toLocaleString()}</Text>
+            <Text style={[styles.overviewValue, { color: colors.error }]}>${(overview.totalExpenses || 0).toLocaleString()}</Text>
           </View>
 
           {/* Transactions */}
@@ -50,18 +72,25 @@ export default function FinancialScreen() {
             </TouchableOpacity>
           </View>
 
-          {transactions.map((tx) => (
-            <View key={tx.title+tx.date} style={[styles.txItem, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
+          {loading && (
+            <View style={{ padding: Spacing.md, alignItems: 'center' }}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          )}
+          {error && <Text style={{ color: colors.error, marginBottom: Spacing.sm }}>Failed to load: {error}</Text>}
+
+          {(transactions || []).map((tx) => (
+            <View key={tx.id} style={[styles.txItem, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
               <View style={styles.txLeft}>
                 <Ionicons name="receipt-outline" size={20} color={colors.icon} />
                 <View style={{ marginLeft: 10 }}>
-                  <Text style={[styles.txTitle, { color: colors.text }]}>{tx.title}</Text>
-                  <Text style={[styles.txSubtitle, { color: colors.icon }]}>{`${tx.subtitle} ${tx.date}`}</Text>
+                  <Text style={[styles.txTitle, { color: colors.text }]}>{tx.type || 'Transaction'}</Text>
+                  <Text style={[styles.txSubtitle, { color: colors.icon }]}>{`${tx.notes || ''} ${tx.transaction_date || ''}`}</Text>
                 </View>
               </View>
               <View style={styles.txRight}>
-                <Text style={{ color: tx.sign === '+' ? colors.success : colors.error, fontWeight: Typography.weight.bold }}>
-                  {tx.sign}${tx.amount.toLocaleString()}
+                <Text style={{ color: (tx.credit || 0) > 0 ? colors.success : colors.error, fontWeight: Typography.weight.bold }}>
+                  {(tx.credit || 0) > 0 ? `+${tx.credit.toLocaleString()}` : `-${(tx.debit || 0).toLocaleString()}`}
                 </Text>
                 <Ionicons name="ellipsis-vertical" size={16} color={colors.icon} />
               </View>

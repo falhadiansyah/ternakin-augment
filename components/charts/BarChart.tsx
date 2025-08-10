@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Dimensions, StyleSheet } from 'react-native';
-import { BarChart as RNBarChart } from 'react-native-chart-kit';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import React from 'react';
+import { Dimensions, StyleSheet, View } from 'react-native';
+import { BarChart as RNBarChart } from 'react-native-chart-kit';
 
 interface BarChartData {
   labels: string[];
@@ -19,11 +19,11 @@ interface BarChartProps {
   showValues?: boolean;
 }
 
-export default function BarChart({ 
-  data, 
-  height = 220, 
-  showGrid = true, 
-  showValues = true 
+export default function BarChart({
+  data,
+  height = 220,
+  showGrid = true,
+  showValues = true
 }: BarChartProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
@@ -55,11 +55,12 @@ export default function BarChart({
         chartConfig={chartConfig}
         style={styles.chart}
         withInnerLines={showGrid}
-        withOuterLines={showGrid}
-        withVerticalLines={showGrid}
-        withHorizontalLines={showGrid}
+        withHorizontalLabels={showGrid}
+        withVerticalLabels={showGrid}
         showValuesOnTopOfBars={showValues}
         fromZero={true}
+        yAxisLabel=""
+        yAxisSuffix=""
       />
     </View>
   );

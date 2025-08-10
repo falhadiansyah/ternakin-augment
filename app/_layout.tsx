@@ -1,4 +1,5 @@
 import { AuthProvider } from "@/components/AuthProvider";
+
 import { FontProvider } from "@/components/FontProvider";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -15,6 +16,7 @@ export default function RootLayout() {
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="auth/login" options={{ presentation: "modal" }} />
+              <Stack.Screen name="farm/select" options={{ presentation: "modal" }} />
               <Stack.Screen name="profile/index" options={{ presentation: "modal" }} />
               <Stack.Screen name="profile/farm-details" options={{ presentation: "modal" }} />
             </Stack>

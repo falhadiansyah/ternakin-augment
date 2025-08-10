@@ -4,9 +4,10 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
+import { listFeedingPlan, listRecipes, type FeedingPlanRow, type RecipeRow } from '@/lib/data';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FeedingScreen() {
@@ -16,22 +17,24 @@ export default function FeedingScreen() {
   const shadow = Shadows(isDark);
 
   const [range, setRange] = useState<'schedule' | 'recipes'>('schedule');
+  const [plans, setPlans] = useState<FeedingPlanRow[] | null>(null);
+  const [recipes, setRecipes] = useState<RecipeRow[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const feedSchedules = [
-    { name: 'Broiler Starter Mix', total: '5 kg', feed: 'Daily Feed' },
-    { name: 'Cattle Grain Mix', total: '120 L', feed: 'Daily Water' },
-  ];
-
-  const recipe = {
-    title: 'Broiler Starter Mix',
-    total: '100kg',
-    ingredients: [
-      { name: 'Corn', percent: 50, weight: '50kg' },
-      { name: 'Soybean Meal', percent: 30, weight: '30kg' },
-      { name: 'Fish Meal', percent: 15, weight: '15kg' },
-      { name: 'Vitamins', percent: 5, weight: '5kg' },
-    ],
-  };
+  useEffect(() => {
+    (async () => {
+      const [{ data: p, error: pe }, { data: r, error: re }] = await Promise.all([
+        listFeedingPlan(),
+        listRecipes(),
+      ]);
+      if (pe) setError(pe.message);
+      if (re) setError(re.message);
+      setPlans(p || []);
+      setRecipes(r || []);
+      setLoading(false);
+    })();
+  }, []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -68,17 +71,22 @@ export default function FeedingScreen() {
 
         {/* Content */}
         <View style={styles.content}>
+          {loading && (
+            <View style={{ padding: Spacing.md, alignItems: 'center' }}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          )}
+          {error && <Text style={{ color: colors.error, marginBottom: Spacing.sm }}>Failed to load: {error}</Text>}
+
           {range === 'schedule' ? (
             // Schedule list
             <>
-              {feedSchedules.map((item) => (
-                <View key={item.name} style={[styles.listItem, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
-                  <Text style={[styles.itemTitle, { color: colors.text }]}>{item.name}</Text>
+              {(plans || []).map((p) => (
+                <View key={p.id} style={[styles.listItem, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>{p.recipes?.name ?? 'Recipe'}</Text>
                   <View style={styles.itemMetaRow}>
                     <Ionicons name="scale-outline" size={14} color={colors.icon} />
-                    <Text style={[styles.itemMeta, { color: colors.icon }]}>{item.total}</Text>
-                    <Ionicons name="time-outline" size={14} color={colors.icon} style={{ marginLeft: Spacing.sm }} />
-                    <Text style={[styles.itemMeta, { color: colors.icon }]}>{item.feed}</Text>
+                    <Text style={[styles.itemMeta, { color: colors.icon }]}>Age: {p.age_from_week ?? 0}-{p.age_to_week ?? 0} w</Text>
                   </View>
                   <View style={styles.itemActions}>
                     <Ionicons name="trash-outline" size={18} color={colors.icon} />
@@ -89,28 +97,16 @@ export default function FeedingScreen() {
           ) : (
             // Recipes list/detail
             <>
-              <View style={[styles.recipeCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
-                <View style={styles.recipeHeader}>
-                  <Text style={[styles.recipeTitle, { color: colors.text }]}>{recipe.title}</Text>
-                  <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Total: {recipe.total}</Text>
-                </View>
-
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Ingredients Breakdown</Text>
-                {recipe.ingredients.map((ing) => (
-                  <View key={ing.name} style={styles.ingRow}>
-                    <Text style={[styles.ingName, { color: colors.text }]}>{ing.name}</Text>
-                    <Text style={[styles.ingPercent, { color: colors.icon }]}>{ing.percent}%</Text>
-                    <Text style={[styles.ingWeight, { color: colors.icon }]}>{ing.weight}</Text>
+              {(recipes || []).map((r) => (
+                <View key={r.id} style={[styles.recipeCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
+                  <View style={styles.recipeHeader}>
+                    <Text style={[styles.recipeTitle, { color: colors.text }]}>{r.name}</Text>
+                    {r.total_price_kg != null && (
+                      <Text style={[styles.cardSubtitle, { color: colors.icon }]}>${r.total_price_kg.toLocaleString()} / kg</Text>
+                    )}
                   </View>
-                ))}
-              </View>
-
-              <View style={[styles.recipeCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
-                <View style={styles.recipeHeader}>
-                  <Text style={[styles.recipeTitle, { color: colors.text }]}>Layer Feed Premium</Text>
-                  <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Total: 100kg</Text>
                 </View>
-              </View>
+              ))}
             </>
           )}
         </View>

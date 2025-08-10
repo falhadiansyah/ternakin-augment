@@ -26,9 +26,13 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Set default font for all <Text/> components
-  if (!RNText.defaultProps) RNText.defaultProps = {} as any;
-  RNText.defaultProps.style = [RNText.defaultProps.style, { fontFamily: 'Inter_500Medium' }];
+  // Set default font for all <Text/> components (avoid TS defaultProps usage)
+  try {
+    // @ts-expect-error runtime patch for RN web compat
+    if (!RNText.defaultProps) RNText.defaultProps = {};
+    // @ts-expect-error runtime patch for RN web compat
+    RNText.defaultProps.style = [RNText.defaultProps.style, { fontFamily: 'Inter_500Medium' }];
+  } catch {}
 
   return <>{children}</>;
 }

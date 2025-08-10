@@ -4,9 +4,10 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
+import { listBatches, type BatchRow } from '@/lib/data';
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LivestockScreen() {
@@ -15,30 +16,18 @@ export default function LivestockScreen() {
   const colors = Colors[isDark ? 'dark' : 'light'];
   const shadow = Shadows(isDark);
 
-  const batches = [
-    {
-      name: 'Batch A',
-      animal: 'Broiler Chickens',
-      tag: 'Chicken',
-      entry: '2024-01-15',
-      source: 'Green Valley Farm',
-      animals: 100,
-      cost: '$5,000',
-      age: '8w',
-      expectedWeight: '2.3kg',
-    },
-    {
-      name: 'Batch B',
-      animal: 'Cattle',
-      tag: 'Cattle',
-      entry: '2024-02-01',
-      source: 'Highland Ranch',
-      animals: 25,
-      cost: '$45,000',
-      age: '22m',
-      expectedWeight: '650kg',
-    },
-  ];
+  const [batches, setBatches] = useState<BatchRow[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await listBatches();
+      if (error) setError(error.message);
+      setBatches(data || []);
+      setLoading(false);
+    })();
+  }, []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -53,30 +42,38 @@ export default function LivestockScreen() {
         </View>
 
         <View style={styles.content}>
-          {batches.map((b) => (
-            <View key={b.name} style={[styles.batchCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
+          {loading && (
+            <View style={{ padding: Spacing.md, alignItems: 'center' }}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          )}
+          {error && (
+            <Text style={{ color: colors.error, marginBottom: Spacing.sm }}>Failed to load: {error}</Text>
+          )}
+          {(batches || []).map((b) => (
+            <View key={b.id} style={[styles.batchCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
               <View style={styles.batchHeader}>
                 <View>
                   <Text style={[styles.batchTitle, { color: colors.text }]}>{b.name}</Text>
                   <Text style={[styles.batchSubtitle, { color: colors.icon }]}>{b.animal}</Text>
                 </View>
                 <View style={[styles.badge, { borderColor: colors.border }]}>
-                  <Text style={[styles.badgeText, { color: colors.icon }]}>{b.tag}</Text>
+                  <Text style={[styles.badgeText, { color: colors.icon }]}>{b.breed}</Text>
                 </View>
               </View>
 
               <View style={styles.metaRow}>
                 <Ionicons name="calendar-outline" size={14} color={colors.icon} />
-                <Text style={[styles.metaText, { color: colors.icon }]}>Entry: {b.entry}</Text>
+                <Text style={[styles.metaText, { color: colors.icon }]}>Entry: {b.entry_date ?? '-'}</Text>
                 <Ionicons name="business-outline" size={14} color={colors.icon} style={{ marginLeft: Spacing.sm }} />
-                <Text style={[styles.metaText, { color: colors.icon }]}>Source: {b.source}</Text>
+                <Text style={[styles.metaText, { color: colors.icon }]}>Source: {b.source ?? '-'}</Text>
               </View>
 
               <View style={styles.statsRow}>
-                <Stat label="Animals" value={`${b.animals}`} colors={colors} />
-                <Stat label="Cost" value={b.cost} colors={colors} />
-                <Stat label="Age" value={b.age} colors={colors} />
-                <Stat label="Expected Weight" value={b.expectedWeight} colors={colors} />
+                <Stat label="Animals" value={`${b.current_count ?? b.starting_count ?? 0}`} colors={colors} />
+                <Stat label="Cost" value={`$${(b.total_cost ?? 0).toLocaleString()}`} colors={colors} />
+                <Stat label="Age" value={`${b.current_age_weeks}w`} colors={colors} />
+                <Stat label="Income" value={`$${(b.total_income ?? 0).toLocaleString()}`} colors={colors} />
               </View>
 
               <View style={styles.cardActions}>

@@ -21,16 +21,16 @@ export const livestockCalculations = {
       pig: { baseWeight: 1.5, weeklyGrowth: 1.8 },
     };
 
-    const rates = weightGrowthRates[animalType.toLowerCase()] || 
-                  weightGrowthRates.chicken;
+    const key = (animalType || '').toLowerCase() as keyof typeof weightGrowthRates;
+    const rates = weightGrowthRates[key] ?? weightGrowthRates.chicken;
 
     return rates.baseWeight + (rates.weeklyGrowth * ageInWeeks);
   },
 
   // Calculate feed requirements based on animal count and type
   calculateFeedRequirement(
-    animalType: string, 
-    count: number, 
+    animalType: string,
+    count: number,
     ageInWeeks: number
   ): { dailyFeed: number; dailyWater: number } {
     // Feed requirements per animal per day (kg)
@@ -42,8 +42,9 @@ export const livestockCalculations = {
       pig: { feedPerDay: 2.5, waterPerDay: 8 },
     };
 
-    const rates = feedRates[animalType.toLowerCase()] || feedRates.chicken;
-    
+    const feedKey = (animalType || '').toLowerCase() as keyof typeof feedRates;
+    const rates = feedRates[feedKey] || feedRates.chicken;
+
     // Adjust for age (younger animals eat less)
     const ageFactor = Math.min(1, ageInWeeks / 20); // Full requirement at 20 weeks
     const adjustedFeedRate = rates.feedPerDay * (0.3 + 0.7 * ageFactor);
@@ -147,13 +148,13 @@ export const financialCalculations = {
       if (!acc[date]) {
         acc[date] = { income: 0, expense: 0 };
       }
-      
+
       if (transaction.type === 'income') {
         acc[date].income += transaction.amount;
       } else {
         acc[date].expense += transaction.amount;
       }
-      
+
       return acc;
     }, {} as Record<string, { income: number; expense: number }>);
 
@@ -180,11 +181,11 @@ export const dateHelpers = {
   getDateRange(period: 'today' | 'this_month' | 'this_year'): { start_date: string; end_date: string } {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    
+
     switch (period) {
       case 'today':
         return { start_date: today, end_date: today };
-      
+
       case 'this_month':
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -192,7 +193,7 @@ export const dateHelpers = {
           start_date: monthStart.toISOString().split('T')[0],
           end_date: monthEnd.toISOString().split('T')[0],
         };
-      
+
       case 'this_year':
         const yearStart = new Date(now.getFullYear(), 0, 1);
         const yearEnd = new Date(now.getFullYear(), 11, 31);
@@ -200,7 +201,7 @@ export const dateHelpers = {
           start_date: yearStart.toISOString().split('T')[0],
           end_date: yearEnd.toISOString().split('T')[0],
         };
-      
+
       default:
         return { start_date: today, end_date: today };
     }
@@ -209,7 +210,7 @@ export const dateHelpers = {
   // Format date for display
   formatDate(dateString: string, format: 'short' | 'long' = 'short'): string {
     const date = new Date(dateString);
-    
+
     if (format === 'long') {
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
@@ -217,7 +218,7 @@ export const dateHelpers = {
         day: 'numeric',
       });
     }
-    
+
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -230,7 +231,7 @@ export const dateHelpers = {
     const checkDate = new Date(date);
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     return checkDate >= start && checkDate <= end;
   },
 };
