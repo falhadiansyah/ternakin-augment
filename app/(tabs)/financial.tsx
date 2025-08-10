@@ -6,8 +6,8 @@ import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { getBalance, listTransactions, type CashbookRow } from '@/lib/data';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FinancialScreen() {
@@ -20,20 +20,27 @@ export default function FinancialScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<{ total_balance: number; total_debit: number; total_credit: number } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const [{ data: tx, error: te }, { data: bal, error: be }] = await Promise.all([
-        listTransactions(20),
-        getBalance(),
-      ]);
-      if (te) setError(te.message);
-      if (be) setError(be.message);
-      setTransactions(tx || []);
-      setBalance(bal || null);
-      setLoading(false);
-    })();
+  const load = useCallback(async () => {
+    const [{ data: tx, error: te }, { data: bal, error: be }] = await Promise.all([
+      listTransactions(20),
+      getBalance(),
+    ]);
+    if (te) setError(te.message); else setError(null);
+    if (be) setError(be.message);
+    setTransactions(tx || []);
+    setBalance(bal || null);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   const overview = useMemo(() => {
     if (balance) {
@@ -51,7 +58,8 @@ export default function FinancialScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title={t('nav.financial')} />
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl }}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
         <View style={styles.content}>
           {/* Overview cards */}
           <View style={[styles.overviewCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
@@ -66,7 +74,11 @@ export default function FinancialScreen() {
           {/* Transactions */}
           <View style={styles.transHeaderRow}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Transactions</Text>
-            <TouchableOpacity activeOpacity={0.8} style={[styles.addBtn, { backgroundColor: colors.primary }, shadow]}>
+            <TouchableOpacity activeOpacity={0.8} style={[styles.addBtn, { backgroundColor: colors.primary }, shadow]}
+              onPress={() => {
+                const { router } = require('expo-router');
+                router.push('/finance/form');
+              }}>
               <Ionicons name="add" size={16} color="#fff" />
               <Text style={styles.addBtnText}>Add Transaction</Text>
             </TouchableOpacity>
@@ -92,7 +104,12 @@ export default function FinancialScreen() {
                 <Text style={{ color: (tx.credit || 0) > 0 ? colors.success : colors.error, fontWeight: Typography.weight.bold }}>
                   {(tx.credit || 0) > 0 ? `+${tx.credit.toLocaleString()}` : `-${(tx.debit || 0).toLocaleString()}`}
                 </Text>
-                <Ionicons name="ellipsis-vertical" size={16} color={colors.icon} />
+                <TouchableOpacity onPress={() => {
+                  const { router } = require('expo-router');
+                  router.push({ pathname: '/finance/form', params: { id: tx.id } });
+                }}>
+                  <Ionicons name="create-outline" size={18} color={colors.icon} />
+                </TouchableOpacity>
               </View>
             </View>
           ))}

@@ -17,6 +17,9 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="auth/login" options={{ presentation: "modal" }} />
               <Stack.Screen name="farm/select" options={{ presentation: "modal" }} />
+              <Stack.Screen name="batch/form" options={{ presentation: "modal" }} />
+              <Stack.Screen name="recipe/form" options={{ presentation: "modal" }} />
+              <Stack.Screen name="finance/form" options={{ presentation: "modal" }} />
               <Stack.Screen name="profile/index" options={{ presentation: "modal" }} />
               <Stack.Screen name="profile/farm-details" options={{ presentation: "modal" }} />
             </Stack>

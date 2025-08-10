@@ -5,12 +5,13 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const { isDark } = useTheme();
   const { t } = useLanguage();
   const colors = Colors[isDark ? 'dark' : 'light'];
+  const insets = useSafeAreaInsets();
 
   return (
     <AuthGuard>
@@ -25,7 +26,8 @@ export default function TabLayout() {
               backgroundColor: colors.card,
               borderTopColor: colors.border,
               borderTopWidth: 1,
-              height: 60,
+              height: Math.max(60, 60 + insets.bottom),
+              paddingBottom: insets.bottom,
             },
             tabBarLabelStyle: {
               fontSize: 11,

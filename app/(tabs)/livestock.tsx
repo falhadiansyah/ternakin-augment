@@ -6,8 +6,8 @@ import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { listBatches, type BatchRow } from '@/lib/data';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LivestockScreen() {
@@ -19,23 +19,37 @@ export default function LivestockScreen() {
   const [batches, setBatches] = useState<BatchRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data, error } = await listBatches();
+    if (error) setError(error.message); else setError(null);
+    setBatches(data || []);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    (async () => {
-      const { data, error } = await listBatches();
-      if (error) setError(error.message);
-      setBatches(data || []);
-      setLoading(false);
-    })();
-  }, []);
+    load();
+  }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title={t('nav.livestock')} />
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl }}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
         <View style={styles.toolbar}>
           <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }, shadow]}
-            onPress={() => {}}>
+            onPress={() => {
+              // Navigate to Batch Form
+              const { router } = require('expo-router');
+              router.push('/batch/form');
+            }}>
             <Ionicons name="add" color="#fff" size={16} />
             <Text style={styles.actionBtnText}>Add New Batch</Text>
           </TouchableOpacity>
@@ -77,10 +91,15 @@ export default function LivestockScreen() {
               </View>
 
               <View style={styles.cardActions}>
-                <TouchableOpacity style={[styles.iconBtn, { borderColor: colors.border }]}>
+                <TouchableOpacity style={[styles.iconBtn, { borderColor: colors.border }]}
+                  onPress={() => { /* future: add history */ }}>
                   <Ionicons name="add" size={18} color={colors.text} />
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.iconBtn, { borderColor: colors.border }]}>
+                <TouchableOpacity style={[styles.iconBtn, { borderColor: colors.border }]}
+                  onPress={() => {
+                    const { router } = require('expo-router');
+                    router.push({ pathname: '/batch/form', params: { id: b.id } });
+                  }}>
                   <Ionicons name="create-outline" size={18} color={colors.text} />
                 </TouchableOpacity>
               </View>

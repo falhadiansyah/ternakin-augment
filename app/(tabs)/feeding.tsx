@@ -4,10 +4,10 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
-import { listFeedingPlan, listRecipes, type FeedingPlanRow, type RecipeRow } from '@/lib/data';
+import { getRecipeItems, listFeedingPlan, listRecipes, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FeedingScreen() {
@@ -19,27 +19,43 @@ export default function FeedingScreen() {
   const [range, setRange] = useState<'schedule' | 'recipes'>('schedule');
   const [plans, setPlans] = useState<FeedingPlanRow[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeRow[] | null>(null);
+  const [recipeItems, setRecipeItems] = useState<Record<string, RecipeItemRow[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const [{ data: p, error: pe }, { data: r, error: re }] = await Promise.all([
-        listFeedingPlan(),
-        listRecipes(),
-      ]);
-      if (pe) setError(pe.message);
-      if (re) setError(re.message);
-      setPlans(p || []);
-      setRecipes(r || []);
-      setLoading(false);
-    })();
+  const load = useCallback(async () => {
+    const [{ data: p, error: pe }, { data: r, error: re }] = await Promise.all([
+      listFeedingPlan(),
+      listRecipes(),
+    ]);
+    if (pe) setError(pe.message); else setError(null);
+    if (re) setError(re.message);
+    setPlans(p || []);
+    setRecipes(r || []);
+    // load items for each recipe (best-effort)
+    const itemsMap: Record<string, RecipeItemRow[]> = {};
+    for (const rec of (r || [])) {
+      const { data: items } = await getRecipeItems(rec.id);
+      itemsMap[rec.id] = items || [];
+    }
+    setRecipeItems(itemsMap);
+    setLoading(false);
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title={t('nav.feeding')} />
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl }}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
         {/* Segmented tabs */}
         <View style={[styles.filtersRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
           {(['schedule', 'recipes'] as const).map((tab) => (
@@ -62,7 +78,11 @@ export default function FeedingScreen() {
           ))}
 
           {range === 'recipes' && (
-            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}>
+            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}
+              onPress={() => {
+                const { router } = require('expo-router');
+                router.push('/recipe/form');
+              }}>
               <Ionicons name="add" color="#fff" size={16} />
               <Text style={styles.addBtnText}>Add Recipe</Text>
             </TouchableOpacity>
@@ -101,9 +121,30 @@ export default function FeedingScreen() {
                 <View key={r.id} style={[styles.recipeCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
                   <View style={styles.recipeHeader}>
                     <Text style={[styles.recipeTitle, { color: colors.text }]}>{r.name}</Text>
-                    {r.total_price_kg != null && (
-                      <Text style={[styles.cardSubtitle, { color: colors.icon }]}>${r.total_price_kg.toLocaleString()} / kg</Text>
-                    )}
+                    <TouchableOpacity onPress={() => {
+                      const { router } = require('expo-router');
+                      router.push({ pathname: '/recipe/form', params: { id: r.id } });
+                    }}>
+                      <Ionicons name="create-outline" size={18} color={colors.icon} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Type: {r.type} • Used: {r.used_for}</Text>
+                  {r.total_price_kg != null && (
+                    <Text style={[styles.cardSubtitle, { color: colors.icon }]}>${r.total_price_kg.toLocaleString()} / kg</Text>
+                  )}
+                  {/* Ingredients breakdown */}
+                  <View style={{ marginTop: 6 }}>
+                    {(recipeItems[r.id] || []).map((it, idx) => (
+                      <View key={idx} style={{ marginBottom: 6 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ color: colors.text }}>{it.name}</Text>
+                          <Text style={{ color: colors.icon }}>{it.percentages}%</Text>
+                        </View>
+                        <View style={{ height: 6, backgroundColor: colors.secondary, borderRadius: 999, overflow: 'hidden', marginTop: 2 }}>
+                          <View style={{ width: `${Math.max(0, Math.min(100, it.percentages))}%`, height: '100%', backgroundColor: colors.primary }} />
+                        </View>
+                      </View>
+                    ))}
                   </View>
                 </View>
               ))}
