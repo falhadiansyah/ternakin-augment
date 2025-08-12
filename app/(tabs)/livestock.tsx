@@ -103,11 +103,6 @@ export default function LivestockScreen() {
       return;
     }
 
-    if (!adjustmentPrice || parseFloat(adjustmentPrice) < 0) {
-      showToast('Please enter a valid price for financial tracking', 'error');
-      return;
-    }
-
     try {
       setSaving(true);
 
@@ -149,45 +144,49 @@ export default function LivestockScreen() {
 
       if (historyError) throw historyError;
 
-      // Get the timestamp from the history record for proper audit trail
-      const { data: historyData } = await supabase
-        .from('batches_history')
-        .select('created_at')
-        .eq('batches_id', stockModal.batch.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
+      // Only create financial transaction if price is provided and greater than 0
+      const price = parseFloat(adjustmentPrice) || 0;
+      if (price > 0) {
+        // Get the timestamp from the history record for proper audit trail
+        const { data: historyData } = await supabase
+          .from('batches_history')
+          .select('created_at')
+          .eq('batches_id', stockModal.batch.id)
+          .order('created_at', { ascending: false })
+          .limit(1);
 
-      const transactionDate = historyData?.[0]?.created_at || new Date().toISOString();
+        const transactionDate = historyData?.[0]?.created_at || new Date().toISOString();
 
-      // Always create a financial transaction for stock adjustments
-      let transactionType: 'income' | 'expense';
-      let amount: number;
+        // Create financial transaction for stock adjustments
+        let transactionType: 'income' | 'expense';
+        let amount: number;
 
-      if (stockModal.isIncrease) {
-        // Purchasing = expense
-        transactionType = 'expense';
-        amount = parseFloat(adjustmentPrice) || 0;
-      } else {
-        // Selling or death
-        if (adjustmentType === 'sold') {
-          transactionType = 'income';
-          amount = parseFloat(adjustmentPrice) || 0;
-        } else {
+        if (stockModal.isIncrease) {
+          // Purchasing = expense
           transactionType = 'expense';
-          amount = parseFloat(adjustmentPrice) || 0;
+          amount = price;
+        } else {
+          // Selling or death
+          if (adjustmentType === 'sold') {
+            transactionType = 'income';
+            amount = price;
+          } else {
+            transactionType = 'expense';
+            amount = price;
+          }
         }
+
+        const { error: transactionError } = await createTransaction({
+          debit: transactionType === 'income' ? amount : 0,
+          credit: transactionType === 'expense' ? amount : 0,
+          transaction_date: transactionDate,
+          type: adjustmentType,
+          notes: `${adjustmentType} - ${count} ${stockModal.batch.animal} from ${stockModal.batch.name}`,
+          batches_id: stockModal.batch.id,
+        });
+
+        if (transactionError) throw transactionError;
       }
-
-      const { error: transactionError } = await createTransaction({
-        debit: transactionType === 'income' ? amount : 0,
-        credit: transactionType === 'expense' ? amount : 0,
-        transaction_date: transactionDate,
-        type: adjustmentType,
-        notes: `${adjustmentType} - ${count} ${stockModal.batch.animal} from ${stockModal.batch.name}`,
-        batches_id: stockModal.batch.id,
-      });
-
-      if (transactionError) throw transactionError;
 
       showToast('Stock adjustment saved successfully', 'success');
       setStockModal(null);
@@ -197,6 +196,27 @@ export default function LivestockScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+  };
+
+  const formatAge = (days: number, weeks: number) => {
+    return `${days}d / ${weeks}w`;
+  };
+
+  const formatWeight = (male: number | null, female: number | null) => {
+    if (male && female) {
+      return `${male} / ${female}`;
+    } else if (male) {
+      return `${male}`;
+    } else if (female) {
+      return `${female}`;
+    }
+    return 'N/A';
   };
 
   return (
@@ -227,108 +247,94 @@ export default function LivestockScreen() {
           )}
           {(batches || []).map((b) => (
             <View key={b.id} style={[styles.listItem, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
+              {/* Header with title and batch tag */}
               <View style={styles.itemHeader}>
-                <Text style={[styles.itemTitle, { color: colors.text }]}>{b.name}</Text>
-              </View>
-              
-              <View style={styles.itemMetaRow}>
-                <Text style={[styles.itemMeta, { color: colors.icon }]}>
-                  <Ionicons name="paw" size={12} /> {b.animal}
-                </Text>
-                <Text style={[styles.itemMeta, { color: colors.icon }]}>
-                  <Ionicons name="calendar" size={12} /> {b.current_age_weeks}w old
-                </Text>
-              </View>
-              
-              <View style={styles.breedRow}>
-                <Text style={[styles.breedLabel, { color: colors.icon }]}>
-                  Breed: <Text style={[styles.breedValue, { color: colors.text }]}>{b.breed}</Text>
-                </Text>
-              </View>
-              
-              <View style={styles.statsRow}>
-                <Stat label="Current Count" value={`${b.current_count || 0}`} colors={colors} />
-                <Stat label="Starting Count" value={`${b.starting_count || 0}`} colors={colors} />
-                <Stat label="Total Cost" value={`$${(b.total_cost || 0).toLocaleString()}`} colors={colors} />
-              </View>
-
-              {/* Growth expectations */}
-              {growthByBatch[b.id] && (
-                <View style={styles.growthSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Expected at {b.current_age_weeks} weeks:</Text>
-                  <View style={styles.growthStats}>
-                    {growthByBatch[b.id].weight_male && (
-                      <Text style={[styles.growthText, { color: colors.icon }]}>
-                        Male: {growthByBatch[b.id].weight_male}g
-                      </Text>
-                    )}
-                    {growthByBatch[b.id].weight_female && (
-                      <Text style={[styles.growthText, { color: colors.icon }]}>
-                        Female: {growthByBatch[b.id].weight_female}g
-                      </Text>
-                    )}
-                    {growthByBatch[b.id].feed_gr && (
-                      <Text style={[styles.growthText, { color: colors.icon }]}>
-                        Feed: {growthByBatch[b.id].feed_gr}g/day
-                      </Text>
-                    )}
-                  </View>
+                <View style={styles.titleSection}>
+                  <Text style={[styles.itemTitle, { color: colors.text }]}>{b.name}</Text>
+                  <Text style={[styles.itemSubtitle, { color: colors.icon }]}>{b.animal}</Text>
                 </View>
-              )}
-
-              {/* Care requirements */}
-              {growthByBatch[b.id] && (
-                <View style={styles.careSection}>
-                  <Text style={[styles.sectionTitle, { color: colors.text }]}>Care Requirements:</Text>
-                  <View style={styles.careStats}>
-                    {growthByBatch[b.id].temperature && (
-                      <View style={styles.careItem}>
-                        <Ionicons name="thermometer" size={14} color={colors.icon} />
-                        <Text style={[styles.careText, { color: colors.icon }]}>
-                          {growthByBatch[b.id].temperature}°C
-                        </Text>
-                      </View>
-                    )}
-                    {growthByBatch[b.id].lighting && (
-                      <View style={styles.careItem}>
-                        <Ionicons name="sunny" size={14} color={colors.icon} />
-                        <Text style={[styles.careText, { color: colors.icon }]}>
-                          {growthByBatch[b.id].lighting}
-                        </Text>
-                      </View>
-                    )}
-                    {growthByBatch[b.id].vaccine && (
-                      <View style={styles.careItem}>
-                        <Ionicons name="medical" size={14} color={colors.icon} />
-                        <Text style={[styles.careText, { color: colors.icon }]}>
-                          {growthByBatch[b.id].vaccine}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+                <View style={[styles.batchTag, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.batchTagText}>{b.breed}</Text>
                 </View>
-              )}
-
-              {/* Current count controls */}
-              <View style={styles.countControls}>
-                <Text style={[styles.countLabel, { color: colors.icon }]}>Current Count:</Text>
-                <View style={styles.countButtons}>
-                  <TouchableOpacity 
-                    style={[styles.countButton, { backgroundColor: colors.error }]}
-                    onPress={() => handleStockAdjustment(b, false)}
-                  >
-                    <Ionicons name="remove" size={16} color="#fff" />
-                  </TouchableOpacity>
-                  <Text style={[styles.countValue, { color: colors.text }]}>
-                    {b.current_count || 0}
+              </View>
+              
+              {/* Entry details */}
+              <View style={styles.entryDetails}>
+                <View style={styles.entryItem}>
+                  <Ionicons name="calendar" size={14} color={colors.icon} />
+                  <Text style={[styles.entryText, { color: colors.icon }]}>
+                    Entry: {formatDate(b.entry_date)}
                   </Text>
-                  <TouchableOpacity 
-                    style={[styles.countButton, { backgroundColor: colors.success }]}
-                    onPress={() => handleStockAdjustment(b, true)}
-                  >
-                    <Ionicons name="add" size={16} color="#fff" />
-                  </TouchableOpacity>
                 </View>
+                <View style={styles.entryItem}>
+                  <Ionicons name="business" size={14} color={colors.icon} />
+                  <Text style={[styles.entryText, { color: colors.icon }]}>
+                    Source: {b.source || 'N/A'}
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Key metrics - 3 columns */}
+              <View style={styles.keyMetrics}>
+                <View style={styles.metricColumn}>
+                  <Text style={[styles.metricValue, { color: colors.text }]}>
+                    {b.current_count || 0} Animals
+                  </Text>
+                </View>
+                <View style={styles.metricColumn}>
+                  <Text style={[styles.metricValue, { color: colors.text }]}>
+                    {formatAge(b.current_age_days || 0, b.current_age_weeks || 0)} Age
+                  </Text>
+                </View>
+                <View style={styles.metricColumn}>
+                  <Text style={[styles.metricValue, { color: colors.text }]}>
+                    {formatWeight(growthByBatch[b.id]?.weight_male, growthByBatch[b.id]?.weight_female)} Weight M/F
+                  </Text>
+                </View>
+              </View>
+
+              {/* Additional metrics - 3 columns */}
+              <View style={styles.additionalMetrics}>
+                <View style={styles.metricColumn}>
+                  <View style={styles.metricWithIcon}>
+                    <Ionicons name="thermometer" size={14} color={colors.icon} />
+                    <Text style={[styles.metricText, { color: colors.icon }]}>
+                      {growthByBatch[b.id]?.temperature ? `${growthByBatch[b.id].temperature}°C` : 'N/A'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.metricColumn}>
+                  <View style={styles.metricWithIcon}>
+                    <Ionicons name="sunny" size={14} color={colors.icon} />
+                    <Text style={[styles.metricText, { color: colors.icon }]}>
+                      {growthByBatch[b.id]?.lighting || 'N/A'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.metricColumn}>
+                  <View style={styles.metricWithIcon}>
+                    <Ionicons name="medical" size={14} color={colors.icon} />
+                    <Text style={[styles.metricText, { color: colors.icon }]}>
+                      {growthByBatch[b.id]?.vaccine || '-'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Action buttons - positioned on the bottom-right */}
+              <View style={styles.actionButtons}>
+                <TouchableOpacity 
+                  style={[styles.actionButton, { backgroundColor: colors.secondary }]}
+                  onPress={() => handleStockAdjustment(b, true)}
+                >
+                  <Ionicons name="add" size={16} color={colors.text} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.actionButton, { backgroundColor: colors.secondary }]}
+                  onPress={() => handleStockAdjustment(b, false)}
+                >
+                  <Ionicons name="remove" size={16} color={colors.text} />
+                </TouchableOpacity>
               </View>
             </View>
           ))}
@@ -392,13 +398,13 @@ export default function LivestockScreen() {
             </View>
 
             <View style={styles.modalField}>
-              <Text style={[styles.modalLabel, { color: colors.icon }]}>Total Price *</Text>
+              <Text style={[styles.modalLabel, { color: colors.icon }]}>Total Price (Optional)</Text>
               <TextInput
                 value={adjustmentPrice}
                 onChangeText={setAdjustmentPrice}
                 keyboardType="numeric"
                 style={[styles.modalInput, { borderColor: colors.border, color: colors.text }]}
-                placeholder="Enter price (required for financial tracking)"
+                placeholder="Enter price (optional - only for financial tracking)"
               />
             </View>
 
@@ -429,15 +435,6 @@ export default function LivestockScreen() {
   );
 }
 
-function Stat({ label, value, colors }: { label: string; value: string; colors: typeof Colors.light }) {
-  return (
-    <View style={styles.stat}>
-      <Text style={[styles.statLabel, { color: colors.icon }]}>{label}</Text>
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
@@ -445,31 +442,98 @@ const styles = StyleSheet.create({
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radii.sm },
   actionBtnText: { color: '#fff', fontWeight: Typography.weight.bold },
   content: { padding: Spacing.md },
-  listItem: { borderWidth: 1, borderRadius: Radii.md, padding: Spacing.md, marginBottom: Spacing.sm },
-  itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
-  itemTitle: { fontSize: Typography.title, fontWeight: Typography.weight.bold },
-  itemMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md as any, marginBottom: Spacing.sm },
-  itemMeta: { fontSize: Typography.caption, flexDirection: 'row', alignItems: 'center' },
-  breedRow: { marginBottom: Spacing.sm },
-  breedLabel: { fontSize: Typography.caption },
-  breedValue: { fontWeight: Typography.weight.medium },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
-  stat: { alignItems: 'center' },
-  statLabel: { fontSize: Typography.caption, marginBottom: 2 },
-  statValue: { fontSize: Typography.body, fontWeight: Typography.weight.bold },
-  growthSection: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.1)', paddingTop: Spacing.sm },
-  sectionTitle: { fontSize: Typography.caption, fontWeight: Typography.weight.medium, marginBottom: Spacing.xs },
-  growthStats: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm as any },
-  growthText: { fontSize: Typography.caption },
-  careSection: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.1)', paddingTop: Spacing.sm, marginTop: Spacing.sm },
-  careStats: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm as any },
-  careItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any },
-  careText: { fontSize: Typography.caption },
-  countControls: { borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.1)', paddingTop: Spacing.sm, marginTop: Spacing.sm, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  countLabel: { fontSize: Typography.caption, fontWeight: Typography.weight.medium },
-  countButtons: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm as any },
-  countButton: { padding: Spacing.sm, borderRadius: Radii.sm },
-  countValue: { fontSize: Typography.body, fontWeight: Typography.weight.bold, minWidth: 40, textAlign: 'center' },
+  listItem: { 
+    borderWidth: 1, 
+    borderRadius: Radii.md, 
+    padding: Spacing.md, 
+    marginBottom: Spacing.sm,
+    position: 'relative',
+    paddingBottom: Spacing.xl * 2 // Extra space for action buttons
+  },
+  itemHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
+    marginBottom: Spacing.sm 
+  },
+  titleSection: {
+    flex: 1,
+  },
+  itemTitle: { 
+    fontSize: Typography.title, 
+    fontWeight: Typography.weight.bold,
+    marginBottom: 2
+  },
+  itemSubtitle: { 
+    fontSize: Typography.caption,
+    textTransform: 'capitalize'
+  },
+  batchTag: { 
+    paddingHorizontal: Spacing.sm, 
+    paddingVertical: Spacing.xs, 
+    borderRadius: Radii.pill,
+    minWidth: 60,
+    alignItems: 'center'
+  },
+  batchTagText: { 
+    color: '#fff', 
+    fontSize: Typography.caption, 
+    fontWeight: Typography.weight.medium 
+  },
+  entryDetails: { 
+    flexDirection: 'row', 
+    gap: Spacing.md as any, 
+    marginBottom: Spacing.md 
+  },
+  entryItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: Spacing.xs as any 
+  },
+  entryText: { 
+    fontSize: Typography.caption 
+  },
+  keyMetrics: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: Spacing.sm 
+  },
+  additionalMetrics: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between' 
+  },
+  metricColumn: { 
+    flex: 1, 
+    alignItems: 'center' 
+  },
+  metricValue: { 
+    fontSize: Typography.body, 
+    fontWeight: Typography.weight.bold,
+    textAlign: 'center'
+  },
+  metricWithIcon: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: Spacing.xs as any 
+  },
+  metricText: { 
+    fontSize: Typography.caption,
+    textAlign: 'center'
+  },
+  actionButtons: { 
+    position: 'absolute', 
+    right: Spacing.md, 
+    bottom: Spacing.md,
+    flexDirection: 'row',
+    gap: Spacing.xs as any
+  },
+  actionButton: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: Radii.sm, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

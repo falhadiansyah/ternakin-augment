@@ -7,7 +7,7 @@ import { Typography } from '@/constants/Typography';
 import { createFeedingPlan, deleteFeedingPlan, getRecipeItems, listBatches, listFeedingPlan, listRecipes, updateFeedingPlan, type BatchRow, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
 import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,7 @@ interface FeedingPlanForm {
 
 export default function FeedingPlanScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { isDark } = useTheme();
   const { t } = useLanguage();
   const colors = Colors[isDark ? 'dark' : 'light'];
@@ -28,7 +29,7 @@ export default function FeedingPlanScreen() {
   const insets = useSafeAreaInsets();
 
   // Get batchId from route params for filtering
-  const batchId = (router as any).params?.batchId as string;
+  const batchId = params.batchId as string;
 
   const [plans, setPlans] = useState<FeedingPlanRow[]>([]);
   const [batches, setBatches] = useState<BatchRow[] | null>(null);
@@ -142,6 +143,25 @@ export default function FeedingPlanScreen() {
       showToast('From week cannot be greater than to week', 'error');
       return false;
     }
+
+    // Check for overlapping age ranges with existing plans for the same batch
+    const existingPlans = plans.filter(plan => 
+      plan.batches_id === formData.batches_id && 
+      (showEditModal ? plan.id !== editingPlan?.id : true)
+    );
+
+    for (const existingPlan of existingPlans) {
+      const existingFrom = existingPlan.age_from_week || 0;
+      const existingTo = existingPlan.age_to_week || 0;
+      
+      // Check if the new range overlaps with existing range
+      // Overlap occurs when: new_from <= existing_to AND new_to >= existing_from
+      if (formData.age_from_week <= existingTo && formData.age_to_week >= existingFrom) {
+        showToast(`Age range overlaps with existing plan (Week ${existingFrom}-${existingTo})`, 'error');
+        return false;
+      }
+    }
+
     return true;
   };
 

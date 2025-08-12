@@ -9,7 +9,7 @@ import { createFeedingPlan, deleteRecipe, getGrowthRowWithFallback, getRecipeIte
 import { showToast } from '@/utils/toast';
 
 import { Ionicons } from '@expo/vector-icons';
-
+import { useRouter } from 'expo-router';
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -17,6 +17,7 @@ import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FeedingScreen() {
+  const router = useRouter();
   const { isDark } = useTheme();
   const { t } = useLanguage();
   const colors = Colors[isDark ? 'dark' : 'light'];
@@ -174,7 +175,7 @@ export default function FeedingScreen() {
                     <TouchableOpacity style={[styles.smallBtn, { backgroundColor: colors.primary, position: 'absolute', right: 10, bottom: 14 }]} activeOpacity={0.8}
                       onPress={() => {
                         const { router } = require('expo-router');
-                        router.push({ pathname: '/feeding-plan', params: { batchId: b.id } });
+                        router.push(`/feeding-plan/${b.id}`);
                       }}>
                       <Ionicons name="nutrition" color="#fff" size={14} />
                       <Text style={styles.smallBtnText}>Plan</Text>
