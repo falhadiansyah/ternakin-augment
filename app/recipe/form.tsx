@@ -4,10 +4,12 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { createRecipe, getRecipeById, getRecipeItems, replaceRecipeItems, updateRecipe } from '@/lib/data';
+import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const types = ['custom_mix','commercial'] as const;
 const usedFor = ['starter','grower','finisher'] as const;
@@ -82,9 +84,10 @@ export default function RecipeFormScreen() {
           if (ie) throw ie;
         }
       }
-      Alert.alert('Sukses', 'Resep tersimpan / Saved', [{ text: 'OK', onPress: () => router.back() }]);
+      showToast('Recipe saved', 'success');
+      router.back();
     } catch (e: any) {
-      Alert.alert('Gagal', e?.message || 'Terjadi kesalahan');
+      showToast(e?.message || 'Failed to save recipe', 'error');
     } finally {
       setLoading(false);
     }
@@ -93,11 +96,12 @@ export default function RecipeFormScreen() {
   const addItem = () => setItems(prev => [...prev, { name: '', percentages: '', price_kg: '' }]);
   const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
 
+  const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <Header title={isEdit ? 'Edit Recipe' : 'Add Recipe'} showBackButton onBackPress={() => router.back()} />
-        <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+        <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl + insets.bottom }}>
           <LabeledInput label="Name" error={errors.name}>
             <TextInput value={name} onChangeText={setName} placeholder="Recipe name" placeholderTextColor={colors.icon}
               style={[styles.input, { borderColor: colors.border, color: colors.text }]} />

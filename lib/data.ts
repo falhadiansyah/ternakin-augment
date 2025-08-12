@@ -235,3 +235,115 @@ export async function deleteTransaction(id: string) {
   return { error };
 }
 
+// Growth/master data types and helpers
+export type GrowthRow = {
+  id: string;
+  animal: string;
+  breed: string;
+  age_in_week: number | null;
+  feed_gr: number | null;
+  water_ml: number | null;
+  weight_male: number | null;
+  weight_female: number | null;
+};
+
+export async function getGrowthRow(animal: string, breed: string, ageInWeek: number) {
+  const { data, error } = await supabase
+    .from('master_growth')
+    .select('id, animal, breed, age_in_week, feed_gr, water_ml, weight_male, weight_female')
+    .eq('animal', animal)
+    .eq('breed', breed)
+    .eq('age_in_week', ageInWeek)
+    .maybeSingle();
+  return { data: (data as GrowthRow | null) || null, error };
+}
+
+function computeAge(entryDate: string | null): { days: number; weeks: number } {
+  if (!entryDate) return { days: 0, weeks: 0 };
+  // Parse as UTC midnight to avoid TZ drift
+  const start = new Date(entryDate + 'T00:00:00Z');
+  const now = new Date();
+  const diffMs = now.getTime() - start.getTime();
+  // Entry date counts as day 1
+  const rawDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+  const days = Math.max(1, rawDays);
+  const weeks = Math.max(0, Math.floor(days / 7));
+  return { days, weeks };
+}
+
+/**
+ * Recompute age for all batches and persist only when changed.
+ * Intended to be called on entry to Livestock/Feeding pages.
+ */
+export async function recomputeAndUpdateBatchAges(): Promise<{ updated: number; errors: number }> {
+  const { data: batches, error } = await listBatches();
+  if (error) return { updated: 0, errors: 1 };
+  let updated = 0;
+  let errors = 0;
+  for (const b of batches) {
+    const { days, weeks } = computeAge(b.entry_date);
+    if (days !== (b.current_age_days || 0) || weeks !== (b.current_age_weeks || 0)) {
+      const { error: ue } = await supabase
+        .from('batches')
+        .update({ current_age_days: days, current_age_weeks: weeks })
+        .eq('id', b.id);
+      if (ue) errors += 1; else updated += 1;
+    }
+  }
+  return { updated, errors };
+}
+
+
+// Fallback growth helpers
+export async function getMaxGrowthWeek(animal: string, breed: string): Promise<number | null> {
+  const { data, error } = await supabase
+    .from('master_growth')
+    .select('age_in_week')
+    .eq('animal', animal)
+    .eq('breed', breed)
+    .order('age_in_week', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return (data?.age_in_week as number | null) ?? null;
+}
+
+export async function getGrowthRowWithFallback(animal: string, breed: string, ageInWeek: number) {
+  const targetWeek = ageInWeek < 1 ? 1 : ageInWeek;
+  // Try exact first
+  const exact = await getGrowthRow(animal, breed, targetWeek);
+  if (exact.data) return exact;
+  // If above max, fall back to max available
+  const maxWeek = await getMaxGrowthWeek(animal, breed);
+  if (maxWeek != null) {
+    return await getGrowthRow(animal, breed, maxWeek);
+  }
+  // Nothing available
+  return { data: null, error: null };
+}
+
+// Feeding plan helpers
+export async function createFeedingPlan(payload: { batches_id: string; recipes_id: string; age_from_week?: number | null; age_to_week?: number | null; }) {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { data: null, error: fe };
+  if (!farmId) return { data: null, error: new Error('No farm assigned to your profile') };
+  const { data, error } = await supabase.from('feeding_plan').insert({
+    farm_id: farmId,
+    batches_id: payload.batches_id,
+    recipes_id: payload.recipes_id,
+    age_from_week: payload.age_from_week ?? null,
+    age_to_week: payload.age_to_week ?? null,
+  }).select('*').single();
+  return { data: data as FeedingPlanRow | null, error };
+}
+
+
+export async function updateFeedingPlan(id: string, payload: Partial<{ recipes_id: string; age_from_week: number | null; age_to_week: number | null; }>) {
+  const { data, error } = await supabase.from('feeding_plan').update(payload).eq('id', id).select('*').single();
+  return { data: data as FeedingPlanRow | null, error };
+}
+
+export async function deleteFeedingPlan(id: string) {
+  const { error } = await supabase.from('feeding_plan').delete().eq('id', id);
+  return { error };
+}

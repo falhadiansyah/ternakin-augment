@@ -4,7 +4,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
-import { listBatches, type BatchRow } from '@/lib/data';
+import { getGrowthRowWithFallback, listBatches, recomputeAndUpdateBatchAges, type BatchRow } from '@/lib/data';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -20,8 +20,11 @@ export default function LivestockScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [growthByBatch, setGrowthByBatch] = useState<Record<string, { weight_male: number | null; weight_female: number | null }>>({});
 
   const load = useCallback(async () => {
+    // recompute ages before showing
+    await recomputeAndUpdateBatchAges();
     const { data, error } = await listBatches();
     if (error) setError(error.message); else setError(null);
     setBatches(data || []);
@@ -31,6 +34,18 @@ export default function LivestockScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    // After batches are loaded, fetch expected weights per batch
+    (async () => {
+      const map: Record<string, { weight_male: number | null; weight_female: number | null }> = {};
+      for (const b of (batches || [])) {
+        const { data: g } = await getGrowthRowWithFallback(b.animal, b.breed, b.current_age_weeks || 0);
+        map[b.id] = { weight_male: g?.weight_male ?? null, weight_female: g?.weight_female ?? null };
+      }
+      setGrowthByBatch(map);
+    })();
+  }, [batches]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -85,8 +100,8 @@ export default function LivestockScreen() {
 
               <View style={styles.statsRow}>
                 <Stat label="Animals" value={`${b.current_count ?? b.starting_count ?? 0}`} colors={colors} />
-                <Stat label="Cost" value={`$${(b.total_cost ?? 0).toLocaleString()}`} colors={colors} />
-                <Stat label="Age" value={`${b.current_age_weeks}w`} colors={colors} />
+                <Stat label="Age" value={`${b.current_age_days}d / ${b.current_age_weeks}w`} colors={colors} />
+                <Stat label="Wt♂/♀" value={`${growthByBatch[b.id]?.weight_male ?? '-'} / ${growthByBatch[b.id]?.weight_female ?? '-'}`} colors={colors} />
                 <Stat label="Income" value={`$${(b.total_income ?? 0).toLocaleString()}`} colors={colors} />
               </View>
 

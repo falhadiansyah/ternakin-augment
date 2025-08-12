@@ -9,6 +9,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const categories = ['feed_purchase','livestock_sale','equipment','veterinary','labor','other_income','other_expense'] as const;
 
@@ -90,11 +91,12 @@ export default function FinanceFormScreen() {
   const openDate = () => setShowDate(true);
   const onChangeDate = (_: any, d?: Date) => { setShowDate(false); if (d) setDate(d); };
 
+  const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <Header title={isEdit ? 'Edit Transaction' : 'Add Transaction'} showBackButton onBackPress={() => router.back()} />
-        <ScrollView contentContainerStyle={{ padding: Spacing.md }}>
+        <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl + insets.bottom }}>
           <LabeledInput label="Type">
             <View style={{ flexDirection:'row', gap: 8 }}>
               <Chip label="Income/Credit" selected={isCredit} onPress={() => setIsCredit(true)} />
