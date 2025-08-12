@@ -9,7 +9,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { showToast } from '@/utils/toast';
 
@@ -98,7 +98,7 @@ export default function BatchFormScreen() {
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','bottom']}> 
         <Header title={isEdit ? 'Edit Batch' : 'Add Batch'} showBackButton onBackPress={() => router.back()} />
         <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl + insets.bottom }}>
           <LabeledInput label="Name" error={errors.name}>
@@ -143,7 +143,7 @@ export default function BatchFormScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }

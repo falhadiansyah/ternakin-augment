@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const types = ['custom_mix','commercial'] as const;
 const usedFor = ['starter','grower','finisher'] as const;
@@ -99,7 +99,7 @@ export default function RecipeFormScreen() {
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','bottom']}> 
         <Header title={isEdit ? 'Edit Recipe' : 'Add Recipe'} showBackButton onBackPress={() => router.back()} />
         <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl + insets.bottom }}>
           <LabeledInput label="Name" error={errors.name}>
@@ -159,7 +159,7 @@ export default function RecipeFormScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }

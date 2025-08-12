@@ -9,7 +9,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const categories = ['feed_purchase','livestock_sale','equipment','veterinary','labor','other_income','other_expense'] as const;
 
@@ -94,7 +94,7 @@ export default function FinanceFormScreen() {
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','bottom']}> 
         <Header title={isEdit ? 'Edit Transaction' : 'Add Transaction'} showBackButton onBackPress={() => router.back()} />
         <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl + insets.bottom }}>
           <LabeledInput label="Type">
@@ -147,7 +147,7 @@ export default function FinanceFormScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }

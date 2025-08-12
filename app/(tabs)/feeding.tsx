@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -39,6 +39,13 @@ export default function FeedingScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
+
+  // Edit existing feeding plan modal state
+  const [editingPlan, setEditingPlan] = useState<FeedingPlanRow | null>(null);
+  const [editRecipeId, setEditRecipeId] = useState<string>('');
+  const [editFromWeek, setEditFromWeek] = useState<string>('');
+  const [editToWeek, setEditToWeek] = useState<string>('');
 
   const load = useCallback(async () => {
     // recompute ages first
@@ -86,9 +93,9 @@ export default function FeedingScreen() {
   }, [load]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
       <Header title={t('nav.feeding')} />
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl }}
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl + insets.bottom }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
         {/* Segmented tabs */}
         <View style={[styles.filtersRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
@@ -110,8 +117,6 @@ export default function FeedingScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-
-
         </View>
 
         {/* Content */}
@@ -155,72 +160,10 @@ export default function FeedingScreen() {
                     <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Feed total</Text>
-                        <Text style={[styles.itemTitle, { color: colors.text }]}>{isFinite(totalFeedKg) ? `${totalFeedKg.toFixed(2)} kg` : '-'}</Text>
-
-              {/* Bottom-right Recipe button */}
-              <View style={{ position: 'absolute', right: 10, bottom: 10, flexDirection: 'row', gap: 8 }}>
-                <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}
-                  onPress={() => { setAssigningFor(b); setAssignRecipeId(''); setAssignFromWeek(''); setAssignToWeek(''); }}>
-                  <Ionicons name="nutrition" color="#fff" size={16} />
-                  <Text style={styles.addBtnText}>Recipe</Text>
-                </TouchableOpacity>
-              </View>
-              {/* Accordion toggle icon */}
-              <TouchableOpacity style={{ position: 'absolute', right: 10, top: 10, padding: 6 }}
-                onPress={() => setExpandedBatches(prev => ({ ...prev, [b.id]: !prev[b.id] }))}>
-                <Ionicons name={expandedBatches[b.id] ? 'chevron-up' : 'chevron-down'} color={colors.text} size={18} />
-              </TouchableOpacity>
-
-	              {/* Expanded details: show assigned plans and ingredient breakdown */}
-	              {expandedBatches[b.id] && (
-
-	                <View style={{ marginTop: 10 }}>
-	                  {(plansByBatch[b.id] || []).map((p) => (
-	                    <View key={p.id} style={{ marginBottom: 10 }}>
-	                      <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Plan: {p.age_from_week ?? 0}-{p.age_to_week ?? 0} w</Text>
-	                      {/* Ingredient breakdown */}
-	                      {(recipeItems[p.recipes_id] || []).map((it, idx) => {
-	                        const grams = (totalFeedKg * 1000) * (it.percentages / 100);
-	                        return (
-	                          <View key={idx} style={{ marginTop: 4 }}>
-	                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-	                              <Text style={{ color: colors.text }}>{it.name}</Text>
-	                              <Text style={{ color: colors.icon }}>{it.percentages}% • {grams.toFixed(0)} g</Text>
-	                            </View>
-	                            <View style={{ height: 6, backgroundColor: colors.secondary, borderRadius: 999, overflow: 'hidden', marginTop: 2 }}>
-	                              <View style={{ width: `${Math.max(0, Math.min(100, it.percentages))}%`, height: '100%', backgroundColor: colors.primary }} />
-	                            </View>
-	                          </View>
-	                        );
-	                      })}
-	                    </View>
-	                  ))}
-	                </View>
-
-)}
-
-
-
-	              {/* Bottom-right Recipe button */}
-	              <View style={{ position: 'absolute', right: 10, bottom: 10, flexDirection: 'row', gap: 8 }}>
-	                <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}
-	                  onPress={() => { setAssigningFor(b); setAssignRecipeId(''); setAssignFromWeek(''); setAssignToWeek(''); }}>
-	                  <Ionicons name="nutrition" color="#fff" size={16} />
-	                  <Text style={styles.addBtnText}>Recipe</Text>
-	                </TouchableOpacity>
-	              </View>
-
-	              {/* Accordion toggle icon */}
-	              <TouchableOpacity style={{ position: 'absolute', right: 10, top: 10, padding: 6 }}
-	                onPress={() => setExpandedBatches(prev => ({ ...prev, [b.id]: !prev[b.id] }))}>
-
-	                <Ionicons name={expandedBatches[b.id] ? 'chevron-up' : 'chevron-down'} color={colors.text} size={18} />
-	              </TouchableOpacity>
-
-
-
-
-
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={[styles.itemTitle, { color: colors.text }]}>{isFinite(totalFeedKg) ? `${totalFeedKg.toFixed(2)} kg` : '-'}</Text>
+                          <Ionicons name="chevron-up" size={16} color={colors.icon} />
+                        </View>
                         {per.feed_gr != null && <Text style={[styles.cardSubtitle, { color: colors.icon }]}>{per.feed_gr} g/animal × {count}</Text>}
                       </View>
                       <View style={{ flex: 1 }}>
@@ -228,13 +171,86 @@ export default function FeedingScreen() {
                         <Text style={[styles.itemTitle, { color: colors.text }]}>{isFinite(totalWaterL) ? `${totalWaterL.toFixed(2)} L` : '-'}</Text>
                         {per.water_ml != null && <Text style={[styles.cardSubtitle, { color: colors.icon }]}>{per.water_ml} ml/animal × {count}</Text>}
                       </View>
+                    </View>
 
-	              {/* Assign Recipe Modal */}
-	              <Modal visible={!!assigningFor} transparent animationType="fade" onRequestClose={() => setAssigningFor(null)}>
-	                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', padding: 16 }}>
-	                  <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 8 }}>
-	                    <Text style={[styles.itemTitle, { color: colors.text }]}>Assign Recipe to {assigningFor?.name}</Text>
-	                    <View style={{ marginTop: 8 }}>
+                    {/* Recipe button absolute positioned at bottom-right */}
+                    <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary, position: 'absolute', right: 10, bottom: 14 }]} activeOpacity={0.8}
+                      onPress={() => { setAssigningFor(b); setAssignRecipeId(''); setAssignFromWeek(''); setAssignToWeek(''); }}>
+                      <Ionicons name="nutrition" color="#fff" size={16} />
+                      <Text style={styles.addBtnText}>Feeding Plan</Text>
+                    </TouchableOpacity>
+
+                    {/* Accordion toggle icon */}
+                    <TouchableOpacity style={{ position: 'absolute', right: 10, top: 10, padding: 6 }}
+                      onPress={() => setExpandedBatches(prev => ({ ...prev, [b.id]: !prev[b.id] }))}>
+                      <Ionicons name={expandedBatches[b.id] ? 'chevron-up' : 'chevron-down'} color={colors.text} size={18} />
+                    </TouchableOpacity>
+
+                    {/* Expanded details: show assigned plans and ingredient breakdown (only active range) */}
+                    {expandedBatches[b.id] && (
+                      <View style={{ marginTop: 10, width: '100%', paddingBottom: Spacing.lg }}>
+                        {(() => {
+                          const age = b.current_age_weeks || 0;
+                          const plansForBatch = plansByBatch[b.id] || [];
+                          if (plansForBatch.length === 0) {
+                            return <Text style={{ color: colors.icon }}>No feeding plans yet.</Text>;
+                          }
+                          const isInRange = (p: FeedingPlanRow) => {
+                            const from = p.age_from_week ?? 0;
+                            const to = p.age_to_week ?? 9999;
+                            return age >= from && age <= to;
+                          };
+                          return plansForBatch.map((p) => (
+                            <View key={p.id} style={{ marginBottom: 12 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Plan: {p.age_from_week ?? 0}-{p.age_to_week ?? 0} w</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                  <TouchableOpacity onPress={() => { setEditingPlan(p); setEditRecipeId(p.recipes_id); setEditFromWeek(String(p.age_from_week ?? '')); setEditToWeek(String(p.age_to_week ?? '')); }}>
+                                    <Ionicons name="create-outline" size={18} color={colors.icon} />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity onPress={async () => {
+                                    Alert.alert('Delete plan', 'Are you sure?', [
+                                      { text: 'Cancel', style: 'cancel' },
+                                      { text: 'Delete', style: 'destructive', onPress: async () => { await deleteFeedingPlan(p.id); await load(); } },
+                                    ]);
+                                  }}>
+                                    <Ionicons name="trash-outline" size={18} color={colors.icon} />
+                                  </TouchableOpacity>
+                                </View>
+                              </View>
+                              {isInRange(p) ? (
+                                (recipeItems[p.recipes_id] || []).map((it, idx) => {
+                                  const grams = (totalFeedKg * 1000) * (it.percentages / 100);
+                                  return (
+                                    <View key={idx} style={{ marginTop: 4, width: '100%' }}>
+                                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                        <Text style={{ color: colors.text }}>{it.name}</Text>
+                                        <Text style={{ color: colors.icon }}>{it.percentages}% • {grams.toFixed(0)} g</Text>
+                                      </View>
+                                      <View style={{ height: 6, backgroundColor: colors.secondary, borderRadius: 999, overflow: 'hidden', marginTop: 2 }}>
+                                        <View style={{ width: `${Math.max(0, Math.min(100, it.percentages))}%`, height: '100%', backgroundColor: colors.primary }} />
+                                      </View>
+                                    </View>
+                                  );
+                                })
+                              ) : (
+                                <Text style={{ color: colors.icon, marginTop: 4 }}>Ingredients hidden (outside current age range)</Text>
+                              )}
+                            </View>
+                          ));
+                        })()}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+
+              {/* Assign Recipe Modal */}
+              <Modal visible={!!assigningFor} transparent animationType="fade" onRequestClose={() => setAssigningFor(null)}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', padding: 16 }}>
+                  <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 8 }}>
+                    <Text style={[styles.itemTitle, { color: colors.text }]}>Assign Recipe to {assigningFor?.name}</Text>
+                    <View style={{ marginTop: 8 }}>
                       <Picker
                         label="Recipe"
                         value={assignRecipeId}
@@ -242,45 +258,98 @@ export default function FeedingScreen() {
                         onValueChange={setAssignRecipeId}
                         placeholder="Select recipe"
                       />
-	                    </View>
-	                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-	                      <View style={{ flex: 1 }}>
-	                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>From week</Text>
-	                        <TextInput value={assignFromWeek} onChangeText={setAssignFromWeek} keyboardType="number-pad" style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 8, color: colors.text }} />
-	                      </View>
-	                      <View style={{ flex: 1 }}>
-	                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>To week</Text>
-	                        <TextInput value={assignToWeek} onChangeText={setAssignToWeek} keyboardType="number-pad" style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 8, color: colors.text }} />
-	                      </View>
-	                    </View>
-	                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-	                      <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]} onPress={() => setAssigningFor(null)}>
-	                        <Text style={[styles.addBtnText, { color: colors.text }]}>Cancel</Text>
-	                      </TouchableOpacity>
-	                      <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} onPress={async () => {
-	                        if (!assigningFor || !assignRecipeId) return;
-	                        const from = assignFromWeek ? parseInt(assignFromWeek, 10) : null;
-	                        const to = assignToWeek ? parseInt(assignToWeek, 10) : null;
-	                        await createFeedingPlan({ batches_id: assigningFor.id, recipes_id: assignRecipeId, age_from_week: from ?? undefined, age_to_week: to ?? undefined });
-	                        setAssigningFor(null);
-	                        await load();
-	                      }}>
-	                        <Text style={styles.addBtnText}>Save</Text>
-	                      </TouchableOpacity>
-	                    </View>
-	                  </View>
-	                </View>
-	              </Modal>
-
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>From week</Text>
+                        <TextInput value={assignFromWeek} onChangeText={setAssignFromWeek} keyboardType="number-pad" style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 8, color: colors.text }} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>To week</Text>
+                        <TextInput value={assignToWeek} onChangeText={setAssignToWeek} keyboardType="number-pad" style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 8, color: colors.text }} />
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                      <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]} onPress={() => setAssigningFor(null)}>
+                        <Text style={[styles.addBtnText, { color: colors.text }]}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} onPress={async () => {
+                        if (!assigningFor || !assignRecipeId) { Alert.alert('Validation', 'Please select a recipe'); return; }
+                        const from = parseInt(assignFromWeek, 10);
+                        const to = parseInt(assignToWeek, 10);
+                        if (Number.isNaN(from) || Number.isNaN(to)) { Alert.alert('Validation', 'Please enter valid week range'); return; }
+                        if (from < 0 || to < 0 || from > to) { Alert.alert('Validation', 'Week range is invalid'); return; }
+                        // overlap validation
+                        const existing = plansByBatch[assigningFor.id] || [];
+                        const overlaps = existing.some(p => {
+                          const pf = p.age_from_week ?? 0;
+                          const pt = p.age_to_week ?? 9999;
+                          return from <= pt && to >= pf;
+                        });
+                        if (overlaps) { Alert.alert('Validation', 'Overlapping feeding plan exists for this batch and weeks'); return; }
+                        await createFeedingPlan({ batches_id: assigningFor.id, recipes_id: assignRecipeId, age_from_week: from, age_to_week: to });
+                        setAssigningFor(null);
+                        await load();
+                      }}>
+                        <Text style={styles.addBtnText}>Save</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                );
+                </View>
+              </Modal>
 
-              {/* Assign Recipe Modal */}
-
-              })}
-
-
+              {/* Edit Feeding Plan Modal */}
+              <Modal visible={!!editingPlan} transparent animationType="fade" onRequestClose={() => setEditingPlan(null)}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', padding: 16 }}>
+                  <View style={{ backgroundColor: colors.card, padding: 16, borderRadius: 8 }}>
+                    <Text style={[styles.itemTitle, { color: colors.text }]}>Edit Feeding Plan</Text>
+                    <View style={{ marginTop: 8 }}>
+                      <Picker
+                        label="Recipe"
+                        value={editRecipeId}
+                        options={(recipes || []).map(r => ({ label: r.name, value: r.id }))}
+                        onValueChange={setEditRecipeId}
+                        placeholder="Select recipe"
+                      />
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>From week</Text>
+                        <TextInput value={editFromWeek} onChangeText={setEditFromWeek} keyboardType="number-pad" style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 8, color: colors.text }} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>To week</Text>
+                        <TextInput value={editToWeek} onChangeText={setEditToWeek} keyboardType="number-pad" style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 6, padding: 8, color: colors.text }} />
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+                      <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]} onPress={() => setEditingPlan(null)}>
+                        <Text style={[styles.addBtnText, { color: colors.text }]}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} onPress={async () => {
+                        if (!editingPlan || !editRecipeId) { Alert.alert('Validation', 'Please select a recipe'); return; }
+                        const from = parseInt(editFromWeek, 10);
+                        const to = parseInt(editToWeek, 10);
+                        if (Number.isNaN(from) || Number.isNaN(to)) { Alert.alert('Validation', 'Please enter valid week range'); return; }
+                        if (from < 0 || to < 0 || from > to) { Alert.alert('Validation', 'Week range is invalid'); return; }
+                        const existing = plansByBatch[editingPlan.batches_id] || [];
+                        const overlaps = existing.some(p => {
+                          if (p.id === editingPlan.id) return false;
+                          const pf = p.age_from_week ?? 0;
+                          const pt = p.age_to_week ?? 9999;
+                          return from <= pt && to >= pf;
+                        });
+                        if (overlaps) { Alert.alert('Validation', 'Overlapping feeding plan exists for this batch and weeks'); return; }
+                        await updateFeedingPlan(editingPlan.id, { recipes_id: editRecipeId, age_from_week: from, age_to_week: to });
+                        setEditingPlan(null);
+                        await load();
+                      }}>
+                        <Text style={styles.addBtnText}>Save</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Modal>
             </>
           ) : (
             // Recipes list/detail
@@ -301,7 +370,7 @@ export default function FeedingScreen() {
                     <Text style={[styles.cardSubtitle, { color: colors.icon }]}>${r.total_price_kg.toLocaleString()} / kg</Text>
                   )}
                   {/* Ingredients breakdown */}
-                  <View style={{ marginTop: 6 }}>
+                  <View style={{ marginTop: 6, width: '100%' }}>
                     {(recipeItems[r.id] || []).map((it, idx) => (
                       <View key={idx} style={{ marginBottom: 6 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -349,7 +418,7 @@ const styles = StyleSheet.create({
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any, marginLeft: Spacing.xs, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radii.sm },
   addBtnText: { color: '#fff', fontWeight: Typography.weight.bold },
   content: { padding: Spacing.md },
-  listItem: { borderWidth: 1, borderRadius: Radii.md, padding: Spacing.md, marginBottom: Spacing.sm, position: 'relative' },
+  listItem: { borderWidth: 1, borderRadius: Radii.md, padding: Spacing.md, paddingBottom: Spacing.xl * 3, marginBottom: Spacing.sm, position: 'relative' },
   itemTitle: { fontSize: Typography.title, fontWeight: Typography.weight.bold },
   itemMetaRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any, marginTop: 6 },
   itemMeta: { fontSize: Typography.caption },
