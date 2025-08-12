@@ -20,7 +20,13 @@ export default function LivestockScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [growthByBatch, setGrowthByBatch] = useState<Record<string, { weight_male: number | null; weight_female: number | null }>>({});
+  const [growthByBatch, setGrowthByBatch] = useState<Record<string, { 
+    weight_male: number | null; 
+    weight_female: number | null;
+    temperature?: number | null;
+    lighting?: string | null;
+    vaccine?: string | null;
+  }>>({});
 
   const load = useCallback(async () => {
     // recompute ages before showing
@@ -36,12 +42,24 @@ export default function LivestockScreen() {
   }, [load]);
 
   useEffect(() => {
-    // After batches are loaded, fetch expected weights per batch
+    // After batches are loaded, fetch expected weights and care data per batch
     (async () => {
-      const map: Record<string, { weight_male: number | null; weight_female: number | null }> = {};
+      const map: Record<string, { 
+        weight_male: number | null; 
+        weight_female: number | null;
+        temperature?: number | null;
+        lighting?: string | null;
+        vaccine?: string | null;
+      }> = {};
       for (const b of (batches || [])) {
         const { data: g } = await getGrowthRowWithFallback(b.animal, b.breed, b.current_age_weeks || 0);
-        map[b.id] = { weight_male: g?.weight_male ?? null, weight_female: g?.weight_female ?? null };
+        map[b.id] = { 
+          weight_male: g?.weight_male ?? null, 
+          weight_female: g?.weight_female ?? null,
+          temperature: g?.temperature ?? null,
+          lighting: g?.lightning ?? null,
+          vaccine: g?.vaccine ?? null,
+        };
       }
       setGrowthByBatch(map);
     })();
@@ -86,8 +104,8 @@ export default function LivestockScreen() {
                   <Text style={[styles.batchTitle, { color: colors.text }]}>{b.name}</Text>
                   <Text style={[styles.batchSubtitle, { color: colors.icon }]}>{b.animal}</Text>
                 </View>
-                <View style={[styles.badge, { borderColor: colors.border }]}>
-                  <Text style={[styles.badgeText, { color: colors.icon }]}>{b.breed}</Text>
+                <View style={[styles.badge, { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                  <Text style={[styles.badgeText, { color: '#fff' }]}>{b.breed.toUpperCase().replace('_', ' ')}</Text>
                 </View>
               </View>
 
@@ -101,21 +119,35 @@ export default function LivestockScreen() {
               <View style={styles.statsRow}>
                 <Stat label="Animals" value={`${b.current_count ?? b.starting_count ?? 0}`} colors={colors} />
                 <Stat label="Age" value={`${b.current_age_days}d / ${b.current_age_weeks}w`} colors={colors} />
-                <Stat label="Wt♂/♀" value={`${growthByBatch[b.id]?.weight_male ?? '-'} / ${growthByBatch[b.id]?.weight_female ?? '-'}`} colors={colors} />
-                <Stat label="Income" value={`$${(b.total_income ?? 0).toLocaleString()}`} colors={colors} />
+                <Stat label="Weight M/F" value={`${growthByBatch[b.id]?.weight_male ?? '-'} / ${growthByBatch[b.id]?.weight_female ?? '-'}`} colors={colors} />
+              </View>
+
+              {/* Care information row */}
+              <View style={styles.careRow}>
+                <View style={styles.careItem}>
+                  <Ionicons name="thermometer-outline" size={14} color={colors.icon} />
+                  <Text style={[styles.careText, { color: colors.icon }]}>
+                    {growthByBatch[b.id]?.temperature ? `${growthByBatch[b.id].temperature}°C` : '-'}
+                  </Text>
+                </View>
+                <View style={styles.careItem}>
+                  <Ionicons name="sunny-outline" size={14} color={colors.icon} />
+                  <Text style={[styles.careText, { color: colors.icon }]}>
+                    {growthByBatch[b.id]?.lighting || '-'}
+                  </Text>
+                </View>
+                <View style={styles.careItem}>
+                  <Ionicons name="medical-outline" size={14} color={colors.icon} />
+                  <Text style={[styles.careText, { color: colors.icon }]}>
+                    {growthByBatch[b.id]?.vaccine || '-'}
+                  </Text>
+                </View>
               </View>
 
               <View style={styles.cardActions}>
                 <TouchableOpacity style={[styles.iconBtn, { borderColor: colors.border }]}
                   onPress={() => { /* future: add history */ }}>
                   <Ionicons name="add" size={18} color={colors.text} />
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.iconBtn, { borderColor: colors.border }]}
-                  onPress={() => {
-                    const { router } = require('expo-router');
-                    router.push({ pathname: '/batch/form', params: { id: b.id } });
-                  }}>
-                  <Ionicons name="create-outline" size={18} color={colors.text} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -154,6 +186,9 @@ const styles = StyleSheet.create({
   statBox: { flex: 1, borderWidth: 1, borderColor: 'transparent', paddingVertical: 8 },
   statValue: { fontSize: Typography.title, fontWeight: Typography.weight.bold },
   statLabel: { fontSize: Typography.caption },
+  careRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.sm as any, marginTop: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.1)' },
+  careItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any },
+  careText: { fontSize: Typography.caption, marginLeft: 4 },
   cardActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.xs as any, marginTop: Spacing.xs },
   iconBtn: { width: 34, height: 34, borderRadius: Radii.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
 });

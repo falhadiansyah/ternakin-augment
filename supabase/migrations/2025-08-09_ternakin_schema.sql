@@ -89,6 +89,7 @@ create table if not exists public.batches_history (
   type varchar(100),
   count integer,
   description text,
+  total_price numeric(20,4) not null default 0,
   created_at timestamp default now() not null,
   updated_at timestamp default now() not null
 );

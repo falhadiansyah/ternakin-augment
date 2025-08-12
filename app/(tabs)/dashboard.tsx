@@ -1,13 +1,14 @@
-import { BarChart } from '@/components/charts';
+import { LineChart } from '@/components/charts';
 import { Header } from '@/components/Header';
 import { useLanguage } from '@/components/LanguageProvider';
 import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
+import { getBalance, listBatches, listTransactions } from '@/lib/data';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DashboardScreen() {
@@ -16,27 +17,177 @@ export default function DashboardScreen() {
   const colors = Colors[isDark ? 'dark' : 'light'];
   const shadow = Shadows(isDark);
 
-  // Dummy data
   const [range, setRange] = useState<'today' | 'month' | 'year'>('month');
-  const metrics = {
-    totalLivestock: { value: 450, delta: '+5%' },
-    totalExpenses: { value: 25000, delta: '+2%' },
-    totalIncome: { value: 35000, delta: '+8%' },
-    netProfit: { value: 10000, delta: '+25%' },
-  };
-
-  const chartData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState({
+    totalLivestock: { value: 0, delta: '0%' },
+    totalExpenses: { value: 0, delta: '0%' },
+    totalIncome: { value: 0, delta: '0%' },
+    netProfit: { value: 0, delta: '0%' },
+  });
+  const [chartData, setChartData] = useState({
+    labels: [] as string[],
     datasets: [
-      { data: [12, 14, 10, 16, 18, 20] }, // Income (k)
-      { data: [9, 11, 8, 12, 13, 15] }, // Expenses (k)
+      { 
+        data: [] as number[], 
+        color: (opacity: number) => `rgba(34, 197, 94, ${opacity})`, // Green for income
+        strokeWidth: 2
+      },
+      { 
+        data: [] as number[], 
+        color: (opacity: number) => `rgba(239, 68, 68, ${opacity})`, // Red for expenses
+        strokeWidth: 2
+      },
     ],
-  };
+  });
+
+  const loadData = useCallback(async () => {
+    try {
+      const [{ data: batches }, { data: balance }, { data: transactions }] = await Promise.all([
+        listBatches(),
+        getBalance(),
+        listTransactions(100), // Get more transactions for better calculations
+      ]);
+
+      if (batches && balance && transactions) {
+        // Calculate total livestock
+        const totalLivestock = batches.reduce((sum, batch) => sum + (batch.current_count || 0), 0);
+
+        // Filter transactions by date range
+        const now = new Date();
+        const filteredTransactions = transactions.filter(tx => {
+          if (!tx.transaction_date) return false;
+          const txDate = new Date(tx.transaction_date);
+          
+          switch (range) {
+            case 'today':
+              return txDate.toDateString() === now.toDateString();
+            case 'month':
+              return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+            case 'year':
+              return txDate.getFullYear() === now.getFullYear();
+            default:
+              return true;
+          }
+        });
+
+        // Calculate financial metrics (debit = income, credit = expense)
+        const totalIncome = filteredTransactions.reduce((sum, tx) => sum + (tx.debit || 0), 0);
+        const totalExpenses = filteredTransactions.reduce((sum, tx) => sum + (tx.credit || 0), 0);
+        const netProfit = totalIncome - totalExpenses;
+
+        // Generate chart data - group by week for month view, by month for year view
+        const chartLabels: string[] = [];
+        const incomeData: number[] = [];
+        const expenseData: number[] = [];
+
+        if (range === 'month') {
+          // Group by week
+          const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+          weeks.forEach((week, index) => {
+            chartLabels.push(week);
+            const weekStart = new Date(now.getFullYear(), now.getMonth(), index * 7);
+            const weekEnd = new Date(now.getFullYear(), now.getMonth(), (index + 1) * 7);
+            
+            const weekIncome = filteredTransactions
+              .filter(tx => {
+                if (!tx.transaction_date) return false;
+                const txDate = new Date(tx.transaction_date);
+                return txDate >= weekStart && txDate < weekEnd;
+              })
+              .reduce((sum, tx) => sum + (tx.debit || 0), 0);
+            
+            const weekExpense = filteredTransactions
+              .filter(tx => {
+                if (!tx.transaction_date) return false;
+                const txDate = new Date(tx.transaction_date);
+                return txDate >= weekStart && txDate < weekEnd;
+              })
+              .reduce((sum, tx) => sum + (tx.credit || 0), 0);
+            
+            incomeData.push(weekIncome);
+            expenseData.push(weekExpense);
+          });
+        } else if (range === 'year') {
+          // Group by month
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          months.forEach((month, index) => {
+            chartLabels.push(month);
+            const monthIncome = filteredTransactions
+              .filter(tx => {
+                if (!tx.transaction_date) return false;
+                const txDate = new Date(tx.transaction_date);
+                return txDate.getMonth() === index && txDate.getFullYear() === now.getFullYear();
+              })
+              .reduce((sum, tx) => sum + (tx.debit || 0), 0);
+            
+            const monthExpense = filteredTransactions
+              .filter(tx => {
+                if (!tx.transaction_date) return false;
+                const txDate = new Date(tx.transaction_date);
+                return txDate.getMonth() === index && txDate.getFullYear() === now.getFullYear();
+              })
+              .reduce((sum, tx) => sum + (tx.credit || 0), 0);
+            
+            incomeData.push(monthIncome);
+            expenseData.push(monthExpense);
+          });
+        } else {
+          // Today - show hourly data or just today's total
+          chartLabels.push('Today');
+          incomeData.push(totalIncome);
+          expenseData.push(totalExpenses);
+        }
+
+        setChartData({
+          labels: chartLabels,
+          datasets: [
+            { 
+              data: incomeData, 
+              color: (opacity: number) => `rgba(34, 197, 94, ${opacity})`,
+              strokeWidth: 2
+            },
+            { 
+              data: expenseData, 
+              color: (opacity: number) => `rgba(239, 68, 68, ${opacity})`,
+              strokeWidth: 2
+            },
+          ],
+        });
+
+        setMetrics({
+          totalLivestock: { value: totalLivestock, delta: '+0%' }, // TODO: Calculate delta
+          totalExpenses: { value: totalExpenses, delta: '+0%' },
+          totalIncome: { value: totalIncome, delta: '+0%' },
+          netProfit: { value: netProfit, delta: netProfit >= 0 ? '+0%' : '-0%' },
+        });
+      }
+      setError(null);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [range]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title={t('nav.dashboard')} />
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl }}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={{ paddingBottom: Spacing.xl }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
         {/* Range filter (segmented) */}
         <View style={[styles.filtersRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
           {(['today', 'month', 'year'] as const).map((r) => (
@@ -61,6 +212,16 @@ export default function DashboardScreen() {
 
         {/* KPI Grid */}
         <View style={styles.content}>
+          {loading && (
+            <View style={{ padding: Spacing.md, alignItems: 'center' }}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          )}
+          {error && (
+            <Text style={{ color: colors.error, marginBottom: Spacing.sm, textAlign: 'center' }}>
+              Failed to load: {error}
+            </Text>
+          )}
           <View style={styles.grid}>
             <StatCard
               title="Total Livestock"
@@ -103,7 +264,7 @@ export default function DashboardScreen() {
               <LegendDot color={colors.success} label="Income" textColor={colors.text} />
               <LegendDot color={colors.error} label="Expenses" textColor={colors.text} />
             </View>
-            <BarChart data={chartData} height={220} />
+            <LineChart data={chartData} height={220} showLegend={false} />
           </View>
         </View>
       </ScrollView>

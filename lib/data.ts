@@ -108,19 +108,26 @@ export type CashbookRow = {
 };
 
 export async function listTransactions(limit = 20) {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { data: null, error: fe };
+  if (!farmId) return { data: null, error: new Error('No farm assigned to your profile') };
   const { data, error } = await supabase
     .from('finance_cashbook')
     .select('*')
+    .eq('farm_id', farmId)
     .order('transaction_date', { ascending: false })
     .limit(limit);
   return { data: (data || []) as CashbookRow[], error };
 }
 
 export async function getBalance() {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { data: null, error: fe };
+  if (!farmId) return { data: null, error: new Error('No farm assigned to your profile') };
   const { data, error } = await supabase
     .from('balance')
     .select('*')
-    .limit(1)
+    .eq('farm_id', farmId)
     .single();
   return { data: data as { total_balance: number; total_debit: number; total_credit: number } | null, error };
 }
@@ -153,6 +160,7 @@ export async function createBatch(payload: { name: string; entry_date?: string |
     name: payload.name,
     entry_date: payload.entry_date ?? null,
     starting_count: payload.starting_count ?? null,
+    current_count: payload.starting_count ?? null, // Auto-populate current_count with starting_count
     source: payload.source ?? null,
     animal: payload.animal ?? 'chicken',
     breed: payload.breed ?? 'kub_2',
@@ -179,16 +187,54 @@ export async function createTransaction(payload: { debit?: number; credit?: numb
   const { farmId, error: fe } = await getCurrentFarmId();
   if (fe) return { data: null, error: fe };
   if (!farmId) return { data: null, error: new Error('No farm assigned to your profile') };
+
+  // Get current balance for the farm
+  const { data: currentBalance, error: balanceError } = await supabase
+    .from('balance')
+    .select('total_balance, total_debit, total_credit')
+    .eq('farm_id', farmId)
+    .single();
+
+  let previousBalance = 0;
+  if (currentBalance) {
+    previousBalance = currentBalance.total_balance || 0;
+  }
+
+  // Calculate new balance
+  const debit = payload.debit ?? 0;
+  const credit = payload.credit ?? 0;
+  const newBalance = previousBalance + debit - credit;
+
+  // Insert transaction with calculated balance
   const { data, error } = await supabase.from('finance_cashbook').insert({
     farm_id: farmId,
-    debit: payload.debit ?? 0,
-    credit: payload.credit ?? 0,
-    balance: 0,
+    debit: debit,
+    credit: credit,
+    balance: newBalance,
     transaction_date: payload.transaction_date ?? null,
     type: payload.type ?? null,
     notes: payload.notes ?? null,
     batches_id: payload.batches_id ?? null,
   }).select('*').single();
+
+  if (error) return { data: null, error };
+
+  // Update or create balance record
+  const { error: balanceUpdateError } = await supabase
+    .from('balance')
+    .upsert({
+      farm_id: farmId,
+      total_debit: (currentBalance?.total_debit || 0) + debit,
+      total_credit: (currentBalance?.total_credit || 0) + credit,
+      total_balance: newBalance,
+    }, {
+      onConflict: 'farm_id'
+    });
+
+  if (balanceUpdateError) {
+    console.error('Failed to update balance:', balanceUpdateError);
+  }
+
   return { data: data as CashbookRow | null, error };
 }
 
@@ -202,7 +248,65 @@ export async function updateRecipe(id: string, payload: Partial<Pick<RecipeRow, 
   return { data: data as RecipeRow | null, error };
 }
 export async function updateTransaction(id: string, payload: Partial<Pick<CashbookRow, 'debit' | 'credit' | 'transaction_date' | 'type' | 'notes' | 'batches_id'>>) {
-  const { data, error } = await supabase.from('finance_cashbook').update(payload).eq('id', id).select('*').single();
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { data: null, error: fe };
+  if (!farmId) return { data: null, error: new Error('No farm assigned to your profile') };
+
+  // Get the original transaction to calculate balance difference
+  const { data: originalTransaction, error: originalError } = await supabase
+    .from('finance_cashbook')
+    .select('debit, credit')
+    .eq('id', id)
+    .single();
+
+  if (originalError) return { data: null, error: originalError };
+
+  // Get current balance
+  const { data: currentBalance, error: balanceError } = await supabase
+    .from('balance')
+    .select('total_debit, total_credit, total_balance')
+    .eq('farm_id', farmId)
+    .single();
+
+  if (balanceError) return { data: null, error: balanceError };
+
+  // Calculate balance adjustments
+  const oldDebit = originalTransaction.debit || 0;
+  const oldCredit = originalTransaction.credit || 0;
+  const newDebit = payload.debit ?? oldDebit;
+  const newCredit = payload.credit ?? oldCredit;
+
+  const debitDiff = newDebit - oldDebit;
+  const creditDiff = newCredit - oldCredit;
+  const balanceDiff = debitDiff - creditDiff;
+
+  // Update transaction
+  const { data, error } = await supabase
+    .from('finance_cashbook')
+    .update({
+      ...payload,
+      balance: (currentBalance?.total_balance || 0) + balanceDiff
+    })
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) return { data: null, error };
+
+  // Update balance record
+  const { error: balanceUpdateError } = await supabase
+    .from('balance')
+    .update({
+      total_debit: (currentBalance?.total_debit || 0) + debitDiff,
+      total_credit: (currentBalance?.total_credit || 0) + creditDiff,
+      total_balance: (currentBalance?.total_balance || 0) + balanceDiff,
+    })
+    .eq('farm_id', farmId);
+
+  if (balanceUpdateError) {
+    console.error('Failed to update balance:', balanceUpdateError);
+  }
+
   return { data: data as CashbookRow | null, error };
 }
 
@@ -231,8 +335,51 @@ export async function deleteRecipe(id: string) {
   return { error };
 }
 export async function deleteTransaction(id: string) {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { error: fe };
+  if (!farmId) return { error: new Error('No farm assigned to your profile') };
+
+  // Get the transaction to calculate balance adjustment
+  const { data: transaction, error: transactionError } = await supabase
+    .from('finance_cashbook')
+    .select('debit, credit')
+    .eq('id', id)
+    .single();
+
+  if (transactionError) return { error: transactionError };
+
+  // Get current balance
+  const { data: currentBalance, error: balanceError } = await supabase
+    .from('balance')
+    .select('total_debit, total_credit, total_balance')
+    .eq('farm_id', farmId)
+    .single();
+
+  if (balanceError) return { error: balanceError };
+
+  // Delete transaction
   const { error } = await supabase.from('finance_cashbook').delete().eq('id', id);
-  return { error };
+  if (error) return { error };
+
+  // Update balance record
+  const debit = transaction.debit || 0;
+  const credit = transaction.credit || 0;
+  const balanceDiff = debit - credit;
+
+  const { error: balanceUpdateError } = await supabase
+    .from('balance')
+    .update({
+      total_debit: (currentBalance?.total_debit || 0) - debit,
+      total_credit: (currentBalance?.total_credit || 0) - credit,
+      total_balance: (currentBalance?.total_balance || 0) - balanceDiff,
+    })
+    .eq('farm_id', farmId);
+
+  if (balanceUpdateError) {
+    console.error('Failed to update balance:', balanceUpdateError);
+  }
+
+  return { error: null };
 }
 
 // Growth/master data types and helpers
@@ -245,12 +392,15 @@ export type GrowthRow = {
   water_ml: number | null;
   weight_male: number | null;
   weight_female: number | null;
+  temperature: number | null;
+  lightning: string | null;
+  vaccine: string | null;
 };
 
 export async function getGrowthRow(animal: string, breed: string, ageInWeek: number) {
   const { data, error } = await supabase
     .from('master_growth')
-    .select('id, animal, breed, age_in_week, feed_gr, water_ml, weight_male, weight_female')
+    .select('id, animal, breed, age_in_week, feed_gr, water_ml, weight_male, weight_female, temperature, lightning, vaccine')
     .eq('animal', animal)
     .eq('breed', breed)
     .eq('age_in_week', ageInWeek)

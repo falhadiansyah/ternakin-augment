@@ -4,6 +4,7 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { createTransaction, getTransactionById, listBatches, updateTransaction, type BatchRow } from '@/lib/data';
+import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,7 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const categories = ['feed_purchase','livestock_sale','equipment','veterinary','labor','other_income','other_expense'] as const;
+
 
 export default function FinanceFormScreen() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function FinanceFormScreen() {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState<Date>(new Date());
   const [showDate, setShowDate] = useState(false);
-  const [category, setCategory] = useState<typeof categories[number]>('other_income');
+  const [type, setType] = useState<'income' | 'expense'>('income');
   const [notes, setNotes] = useState('');
   const [batches, setBatches] = useState<BatchRow[]>([]);
   const [batchId, setBatchId] = useState<string | null>(null);
@@ -44,7 +45,7 @@ export default function FinanceFormScreen() {
           setIsCredit(credit);
           setAmount(String(credit ? tx.credit : tx.debit || ''));
           setDate(tx.transaction_date ? new Date(tx.transaction_date) : new Date());
-          setCategory((tx.type as any) || 'other_income');
+          setType((tx.debit || 0) > 0 ? 'income' : 'expense');
           setNotes(tx.notes || '');
           setBatchId(tx.batches_id || null);
         }
@@ -56,7 +57,7 @@ export default function FinanceFormScreen() {
     const e: Record<string,string> = {};
     const amt = Number(amount);
     if (isNaN(amt) || amt < 0.01) e.amount = 'Minimal 0.01';
-    if (!category) e.category = 'Kategori wajib';
+    if (!notes.trim()) e.notes = 'Notes are required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -69,20 +70,22 @@ export default function FinanceFormScreen() {
         debit: isCredit ? 0 : Number(amount),
         credit: isCredit ? Number(amount) : 0,
         transaction_date: date.toISOString().slice(0,10),
-        type: category,
+        type: type,
         notes: notes.trim() || null,
         batches_id: batchId || null,
       };
       if (isEdit) {
         const { error } = await updateTransaction(id!, payload);
         if (error) throw error;
+        showToast('Transaction updated successfully', 'success');
       } else {
         const { error } = await createTransaction(payload);
         if (error) throw error;
+        showToast('Transaction created successfully', 'success');
       }
-      Alert.alert('Sukses', 'Transaksi tersimpan / Saved', [{ text: 'OK', onPress: () => router.back() }]);
+      router.back();
     } catch (e: any) {
-      Alert.alert('Gagal', e?.message || 'Terjadi kesalahan');
+      showToast(e?.message || 'Failed to save transaction', 'error');
     } finally {
       setLoading(false);
     }
@@ -99,8 +102,8 @@ export default function FinanceFormScreen() {
         <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl + insets.bottom }}>
           <LabeledInput label="Type">
             <View style={{ flexDirection:'row', gap: 8 }}>
-              <Chip label="Income/Credit" selected={isCredit} onPress={() => setIsCredit(true)} />
-              <Chip label="Expense/Debit" selected={!isCredit} onPress={() => setIsCredit(false)} />
+              <Chip label="Income" selected={!isCredit} onPress={() => setIsCredit(false)} />
+              <Chip label="Expense" selected={isCredit} onPress={() => setIsCredit(true)} />
             </View>
           </LabeledInput>
 
@@ -118,13 +121,9 @@ export default function FinanceFormScreen() {
             )}
           </LabeledInput>
 
-          <LabeledInput label="Category" error={errors.category}>
-            <Picker value={category} options={categories} onChange={setCategory} />
-          </LabeledInput>
-
-          <LabeledInput label="Notes (optional)">
-            <TextInput value={notes} onChangeText={setNotes} placeholder="Notes" placeholderTextColor={colors.icon} multiline
-              style={[styles.input, { borderColor: colors.border, color: colors.text, minHeight: 80 }]} />
+          <LabeledInput label="Notes" error={errors.notes}>
+            <TextInput value={notes} onChangeText={setNotes} placeholder="Transaction description" placeholderTextColor={colors.icon}
+              style={[styles.input, { borderColor: colors.border, color: colors.text }]} />
           </LabeledInput>
 
           <LabeledInput label="Batch (optional)">
