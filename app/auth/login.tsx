@@ -49,12 +49,12 @@ export default function LoginScreen() {
     setEmailError('');
 
     if (!email.trim()) {
-      setEmailError('Email is required');
+      setEmailError(t('auth.email_required'));
       return;
     }
 
     if (!validateEmail(email)) {
-      setEmailError('Please enter a valid email address');
+      setEmailError(t('auth.valid_email_required'));
       return;
     }
 
@@ -67,7 +67,7 @@ export default function LoginScreen() {
         Alert.alert(t('common.error'), result.error);
       }
     } catch (error: any) {
-      Alert.alert(t('common.error'), error.message || 'Failed to send OTP');
+      Alert.alert(t('common.error'), error.message || t('auth.failed_to_send_otp'));
     }
   };
 
@@ -75,12 +75,12 @@ export default function LoginScreen() {
     setOtpError('');
 
     if (!otp.trim()) {
-      setOtpError('OTP is required');
+      setOtpError(t('auth.otp_required'));
       return;
     }
 
     if (otp.length !== 6) {
-      setOtpError('OTP must be 6 digits');
+      setOtpError(t('auth.otp_must_be_6_digits'));
       return;
     }
 
@@ -89,10 +89,10 @@ export default function LoginScreen() {
       if (result.data && !result.error) {
         router.replace('/(tabs)/dashboard');
       } else if (result.error) {
-        Alert.alert('Verification Error', result.error);
+        Alert.alert(t('auth.verification_error'), result.error);
       }
     } catch (error: any) {
-      Alert.alert('Verification Error', error.message || 'Invalid OTP');
+      Alert.alert(t('auth.verification_error'), error.message || t('auth.invalid_otp'));
     }
   };
 

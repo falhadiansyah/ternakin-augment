@@ -48,11 +48,23 @@ export default function FinancialScreen() {
       const txDate = new Date(tx.transaction_date);
       
       if (filterDate && filterEndDate) {
-        // Date range filter
-        return txDate >= filterDate && txDate <= filterEndDate;
+        // Date range filter - make it inclusive and handle time zones properly
+        const startDate = new Date(filterDate);
+        startDate.setHours(0, 0, 0, 0); // Start of day
+        
+        const endDate = new Date(filterEndDate);
+        endDate.setHours(23, 59, 59, 999); // End of day
+        
+        return txDate >= startDate && txDate <= endDate;
       } else if (filterDate) {
-        // Single date filter
-        return txDate.toDateString() === filterDate.toDateString();
+        // Single date filter - compare only the date part
+        const filterDateOnly = new Date(filterDate);
+        filterDateOnly.setHours(0, 0, 0, 0);
+        
+        const txDateOnly = new Date(txDate);
+        txDateOnly.setHours(0, 0, 0, 0);
+        
+        return txDateOnly.getTime() === filterDateOnly.getTime();
       }
       
       return true;

@@ -9,12 +9,14 @@ import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface EditableFeedingPlan extends FeedingPlanRow {
-  isNew?: boolean;
-  isEditing?: boolean;
+interface FeedingPlanForm {
+  batches_id: string;
+  recipes_id: string;
+  age_from_week: number;
+  age_to_week: number;
 }
 
 export default function FeedingPlanScreen() {
@@ -26,9 +28,9 @@ export default function FeedingPlanScreen() {
   const insets = useSafeAreaInsets();
 
   // Get batchId from route params for filtering
-  const batchId = router.params?.batchId as string;
+  const batchId = (router as any).params?.batchId as string;
 
-  const [plans, setPlans] = useState<EditableFeedingPlan[]>([]);
+  const [plans, setPlans] = useState<FeedingPlanRow[]>([]);
   const [batches, setBatches] = useState<BatchRow[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeRow[] | null>(null);
   const [recipeItems, setRecipeItems] = useState<Record<string, RecipeItemRow[]>>({});
@@ -36,7 +38,17 @@ export default function FeedingPlanScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [showRecipePicker, setShowRecipePicker] = useState<string | null>(null);
+  
+  // Modal states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<FeedingPlanRow | null>(null);
+  const [formData, setFormData] = useState<FeedingPlanForm>({
+    batches_id: batchId || '',
+    recipes_id: '',
+    age_from_week: 0,
+    age_to_week: 0,
+  });
 
   const load = useCallback(async () => {
     try {
@@ -52,6 +64,7 @@ export default function FeedingPlanScreen() {
 
       // Filter plans by batchId if provided
       const filteredPlans = batchId ? (p || []).filter(plan => plan.batches_id === batchId) : (p || []);
+      
       setPlans(filteredPlans);
       setRecipes(r || []);
       setBatches(b || []);
@@ -80,34 +93,97 @@ export default function FeedingPlanScreen() {
     setRefreshing(false);
   }, [load]);
 
-  const addNewPlan = () => {
-    const newPlan: EditableFeedingPlan = {
-      id: `new-${Date.now()}`,
-      farm_id: '',
-      batches_id: batchId || '', // Auto-set batchId if provided
+  const resetForm = () => {
+    setFormData({
+      batches_id: batchId || '',
       recipes_id: '',
       age_from_week: 0,
       age_to_week: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      isNew: true,
-      isEditing: true,
-    };
-    setPlans(prev => [...prev, newPlan]);
+    });
   };
 
-  const updatePlan = (id: string, updates: Partial<EditableFeedingPlan>) => {
-    setPlans(prev => prev.map(plan => 
-      plan.id === id ? { ...plan, ...updates } : plan
-    ));
+  const openAddModal = () => {
+    resetForm();
+    setShowAddModal(true);
   };
 
-  const deletePlan = async (plan: EditableFeedingPlan) => {
-    if (plan.isNew) {
-      setPlans(prev => prev.filter(p => p.id !== plan.id));
-      return;
+  const openEditModal = (plan: FeedingPlanRow) => {
+    setEditingPlan(plan);
+    setFormData({
+      batches_id: plan.batches_id,
+      recipes_id: plan.recipes_id,
+      age_from_week: plan.age_from_week || 0,
+      age_to_week: plan.age_to_week || 0,
+    });
+    setShowEditModal(true);
+  };
+
+  const closeModals = () => {
+    setShowAddModal(false);
+    setShowEditModal(false);
+    setEditingPlan(null);
+    resetForm();
+  };
+
+  const validateForm = (): boolean => {
+    if (!formData.batches_id) {
+      showToast('Please select a batch', 'error');
+      return false;
     }
+    if (!formData.recipes_id) {
+      showToast('Please select a recipe', 'error');
+      return false;
+    }
+    if (formData.age_from_week < 0 || formData.age_to_week < 0) {
+      showToast('Week values must be positive', 'error');
+      return false;
+    }
+    if (formData.age_from_week > formData.age_to_week) {
+      showToast('From week cannot be greater than to week', 'error');
+      return false;
+    }
+    return true;
+  };
 
+  const savePlan = async () => {
+    if (!validateForm()) return;
+
+    try {
+      setSaving(true);
+      
+      if (showEditModal && editingPlan) {
+        // Update existing plan
+        const { error } = await updateFeedingPlan(editingPlan.id, {
+          recipes_id: formData.recipes_id,
+          age_from_week: formData.age_from_week,
+          age_to_week: formData.age_to_week,
+        });
+        
+        if (error) throw error;
+        showToast('Feeding plan updated successfully', 'success');
+      } else {
+        // Create new plan
+        const { error } = await createFeedingPlan({
+          batches_id: formData.batches_id,
+          recipes_id: formData.recipes_id,
+          age_from_week: formData.age_from_week,
+          age_to_week: formData.age_to_week,
+        });
+        
+        if (error) throw error;
+        showToast('Feeding plan created successfully', 'success');
+      }
+
+      closeModals();
+      await load(); // Reload data
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save feeding plan', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deletePlan = async (plan: FeedingPlanRow) => {
     Alert.alert(
       'Delete Feeding Plan',
       'Are you sure you want to delete this feeding plan?',
@@ -131,55 +207,12 @@ export default function FeedingPlanScreen() {
     );
   };
 
-  const saveAllChanges = async () => {
-    try {
-      setSaving(true);
-      
-      // Save new plans
-      const newPlans = plans.filter(p => p.isNew);
-      for (const plan of newPlans) {
-        if (!plan.batches_id || !plan.recipes_id) {
-          showToast('Please fill in all required fields', 'error');
-          return;
-        }
-        
-        const { error } = await createFeedingPlan({
-          batches_id: plan.batches_id,
-          recipes_id: plan.recipes_id,
-          age_from_week: plan.age_from_week || 0,
-          age_to_week: plan.age_to_week || 0,
-        });
-        
-        if (error) throw error;
-      }
-
-      // Update existing plans
-      const existingPlans = plans.filter(p => !p.isNew && p.isEditing);
-      for (const plan of existingPlans) {
-        const { error } = await updateFeedingPlan(plan.id, {
-          recipes_id: plan.recipes_id,
-          age_from_week: plan.age_from_week || 0,
-          age_to_week: plan.age_to_week || 0,
-        });
-        
-        if (error) throw error;
-      }
-
-      showToast('All changes saved successfully', 'success');
-      await load();
-    } catch (err: any) {
-      showToast(err.message || 'Failed to save changes', 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const getBatchName = (batchId: string) => {
-    return batches?.find(b => b.id === batchId)?.name || 'Select Batch';
+    return batches?.find(b => b.id === batchId)?.name || 'Unknown Batch';
   };
 
   const getRecipeName = (recipeId: string) => {
-    return recipes?.find(r => r.id === recipeId)?.name || 'Select Recipe';
+    return recipes?.find(r => r.id === recipeId)?.name || 'Unknown Recipe';
   };
 
   if (loading) {
@@ -221,62 +254,36 @@ export default function FeedingPlanScreen() {
               <View key={plan.id} style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
                 <View style={styles.planHeader}>
                   <Text style={[styles.planTitle, { color: colors.text }]}>
-                    {plan.isNew ? 'New Feeding Plan' : getBatchName(plan.batches_id)}
+                    {getBatchName(plan.batches_id)}
                   </Text>
-                  <TouchableOpacity 
-                    style={[styles.deleteButton, { backgroundColor: '#ef4444' }]}
-                    onPress={() => deletePlan(plan)}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#fff" />
-                  </TouchableOpacity>
+                  <View style={styles.planActions}>
+                    <TouchableOpacity 
+                      style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                      onPress={() => openEditModal(plan)}
+                    >
+                      <Ionicons name="create-outline" size={16} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.actionButton, { backgroundColor: '#ef4444' }]}
+                      onPress={() => deletePlan(plan)}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
-                                 {/* Inline form fields */}
-                 <View style={styles.formFields}>
-                   <View style={styles.fieldRow}>
-                     <View style={styles.field}>
-                       <Text style={[styles.fieldLabel, { color: colors.icon }]}>Batch</Text>
-                       <Text style={[styles.pickerText, { color: colors.text, padding: Spacing.sm, backgroundColor: colors.secondary, borderRadius: Radii.sm }]}>
-                         {getBatchName(plan.batches_id)}
-                       </Text>
-                     </View>
-                     
-                     <View style={styles.field}>
-                       <Text style={[styles.fieldLabel, { color: colors.icon }]}>Recipe</Text>
-                                                <TouchableOpacity 
-                           style={[styles.pickerButton, { borderColor: colors.border, backgroundColor: colors.secondary }]}
-                           onPress={() => setShowRecipePicker(plan.id)}
-                         >
-                         <Text style={[styles.pickerText, { color: colors.text }]}>
-                           {getRecipeName(plan.recipes_id)}
-                         </Text>
-                         <Ionicons name="chevron-down" size={16} color={colors.icon} />
-                       </TouchableOpacity>
-                     </View>
-                   </View>
-
-                  <View style={styles.fieldRow}>
-                    <View style={styles.field}>
-                      <Text style={[styles.fieldLabel, { color: colors.icon }]}>From Week</Text>
-                      <TextInput 
-                        value={String(plan.age_from_week || '')}
-                        onChangeText={(text) => updatePlan(plan.id, { age_from_week: parseInt(text) || 0 })}
-                        keyboardType="numeric"
-                        style={[styles.textInput, { borderColor: colors.border, color: colors.text }]}
-                        placeholder="0"
-                      />
-                    </View>
-                    
-                    <View style={styles.field}>
-                      <Text style={[styles.fieldLabel, { color: colors.icon }]}>To Week</Text>
-                      <TextInput 
-                        value={String(plan.age_to_week || '')}
-                        onChangeText={(text) => updatePlan(plan.id, { age_to_week: parseInt(text) || 0 })}
-                        keyboardType="numeric"
-                        style={[styles.textInput, { borderColor: colors.border, color: colors.text }]}
-                        placeholder="0"
-                      />
-                    </View>
+                <View style={styles.planDetails}>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, { color: colors.icon }]}>Recipe:</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      {getRecipeName(plan.recipes_id)}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, { color: colors.icon }]}>Age Range:</Text>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      Week {plan.age_from_week || 0} - Week {plan.age_to_week || 0}
+                    </Text>
                   </View>
                 </View>
 
@@ -307,64 +314,115 @@ export default function FeedingPlanScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom action buttons */}
-      <View style={[styles.bottomActions, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-        <TouchableOpacity 
-          style={[styles.actionButton, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-          onPress={addNewPlan}
-        >
-          <Ionicons name="add" size={20} color={colors.text} />
-          <Text style={[styles.actionButtonText, { color: colors.text }]}>Add Row</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.actionButton, { backgroundColor: colors.primary }]}
-          onPress={saveAllChanges}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Ionicons name="save" size={20} color="#fff" />
-          )}
-          <Text style={[styles.actionButtonText, { color: '#fff' }]}>
-            {saving ? 'Saving...' : 'Save All'}
-          </Text>
-                 </TouchableOpacity>
-       </View>
+      {/* Add Button */}
+      <TouchableOpacity 
+        style={[styles.fab, { backgroundColor: colors.primary }]}
+        onPress={openAddModal}
+      >
+        <Ionicons name="add" size={24} color="#fff" />
+      </TouchableOpacity>
 
-       {/* Recipe Picker Modal */}
-       {showRecipePicker && (
-         <View style={styles.modalOverlay}>
-           <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
-             <Text style={[styles.modalTitle, { color: colors.text }]}>Select Recipe</Text>
-             <ScrollView style={styles.recipeList}>
-               {(recipes || []).map((recipe) => (
-                 <TouchableOpacity
-                   key={recipe.id}
-                   style={[styles.recipeOption, { borderColor: colors.border }]}
-                   onPress={() => {
-                     updatePlan(showRecipePicker, { recipes_id: recipe.id });
-                     setShowRecipePicker(null);
-                   }}
-                 >
-                   <Text style={[styles.recipeOptionText, { color: colors.text }]}>{recipe.name}</Text>
-                   <Text style={[styles.recipeOptionSubtext, { color: colors.icon }]}>{recipe.type} • {recipe.used_for}</Text>
-                 </TouchableOpacity>
-               ))}
-             </ScrollView>
-             <TouchableOpacity
-               style={[styles.modalButton, { backgroundColor: colors.secondary }]}
-               onPress={() => setShowRecipePicker(null)}
-             >
-               <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
-             </TouchableOpacity>
-           </View>
-         </View>
-       )}
-     </SafeAreaView>
-   );
- }
+      {/* Add/Edit Modal */}
+      <Modal visible={showAddModal || showEditModal} transparent animationType="fade" onRequestClose={closeModals}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {showEditModal ? 'Edit Feeding Plan' : 'Add Feeding Plan'}
+            </Text>
+            
+            <View style={styles.formField}>
+              <Text style={[styles.fieldLabel, { color: colors.icon }]}>Batch</Text>
+              <View style={[styles.pickerContainer, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
+                <Text style={[styles.pickerText, { color: colors.text }]}>
+                  {getBatchName(formData.batches_id)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={[styles.fieldLabel, { color: colors.icon }]}>Recipe</Text>
+              <ScrollView style={styles.recipePicker} showsVerticalScrollIndicator={false}>
+                {(recipes || []).map((recipe) => (
+                  <TouchableOpacity
+                    key={recipe.id}
+                    style={[
+                      styles.recipeOption,
+                      {
+                        backgroundColor: formData.recipes_id === recipe.id ? colors.primary : colors.secondary,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    onPress={() => setFormData(prev => ({ ...prev, recipes_id: recipe.id }))}
+                  >
+                    <Text style={[
+                      styles.recipeOptionText,
+                      { color: formData.recipes_id === recipe.id ? '#fff' : colors.text }
+                    ]}>
+                      {recipe.name}
+                    </Text>
+                    <Text style={[
+                      styles.recipeOptionSubtext,
+                      { color: formData.recipes_id === recipe.id ? 'rgba(255,255,255,0.8)' : colors.icon }
+                    ]}>
+                      {recipe.type} • {recipe.used_for}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={styles.formField}>
+                <Text style={[styles.fieldLabel, { color: colors.icon }]}>From Week</Text>
+                <TextInput
+                  value={String(formData.age_from_week)}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, age_from_week: parseInt(text) || 0 }))}
+                  keyboardType="numeric"
+                  style={[styles.textInput, { borderColor: colors.border, color: colors.text }]}
+                  placeholder="0"
+                />
+              </View>
+              
+              <View style={styles.formField}>
+                <Text style={[styles.fieldLabel, { color: colors.icon }]}>To Week</Text>
+                <TextInput
+                  value={String(formData.age_to_week)}
+                  onChangeText={(text) => setFormData(prev => ({ ...prev, age_to_week: parseInt(text) || 0 }))}
+                  keyboardType="numeric"
+                  style={[styles.textInput, { borderColor: colors.border, color: colors.text }]}
+                  placeholder="0"
+                />
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.secondary }]}
+                onPress={closeModals}
+                disabled={saving}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={savePlan}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: '#fff' }]}>
+                    {showEditModal ? 'Update' : 'Create'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -404,42 +462,30 @@ const styles = StyleSheet.create({
     fontSize: Typography.title,
     fontWeight: Typography.weight.bold,
   },
-  deleteButton: {
+  planActions: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  actionButton: {
     padding: Spacing.sm,
     borderRadius: Radii.sm,
   },
-  formFields: {
-    gap: Spacing.md,
+  planDetails: {
+    marginBottom: Spacing.sm,
   },
-  fieldRow: {
+  detailRow: {
     flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  field: {
-    flex: 1,
-  },
-  fieldLabel: {
-    fontSize: Typography.caption,
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: Spacing.xs,
+  },
+  detailLabel: {
+    fontSize: Typography.caption,
     fontWeight: Typography.weight.medium,
   },
-  pickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: Spacing.sm,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
-  },
-  pickerText: {
+  detailValue: {
     fontSize: Typography.body,
-    flex: 1,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderRadius: Radii.sm,
-    padding: Spacing.sm,
-    fontSize: Typography.body,
+    fontWeight: Typography.weight.medium,
   },
   ingredientsPreview: {
     borderTopWidth: 1,
@@ -471,75 +517,98 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 4,
   },
-  bottomActions: {
-    flexDirection: 'row',
-    padding: Spacing.md,
-    gap: Spacing.sm,
-    borderTopWidth: 1,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+  fab: {
+    position: 'absolute',
+    bottom: Spacing.xl,
+    right: Spacing.md,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
-    gap: Spacing.xs,
-    paddingVertical: Spacing.md,
-    borderRadius: Radii.sm,
-    borderWidth: 1,
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
-     actionButtonText: {
-     fontSize: Typography.body,
-     fontWeight: Typography.weight.medium,
-   },
-   modalOverlay: {
-     position: 'absolute',
-     top: 0,
-     left: 0,
-     right: 0,
-     bottom: 0,
-     backgroundColor: 'rgba(0,0,0,0.5)',
-     justifyContent: 'center',
-     alignItems: 'center',
-     zIndex: 1000,
-   },
-   modalContent: {
-     width: '80%',
-     maxHeight: '70%',
-     borderRadius: Radii.md,
-     borderWidth: 1,
-     padding: Spacing.md,
-   },
-   modalTitle: {
-     fontSize: Typography.title,
-     fontWeight: Typography.weight.bold,
-     marginBottom: Spacing.md,
-     textAlign: 'center',
-   },
-   recipeList: {
-     maxHeight: 300,
-   },
-   recipeOption: {
-     borderWidth: 1,
-     borderRadius: Radii.sm,
-     padding: Spacing.sm,
-     marginBottom: Spacing.xs,
-   },
-   recipeOptionText: {
-     fontSize: Typography.body,
-     fontWeight: Typography.weight.medium,
-   },
-   recipeOptionSubtext: {
-     fontSize: Typography.caption,
-     marginTop: 2,
-   },
-   modalButton: {
-     padding: Spacing.sm,
-     borderRadius: Radii.sm,
-     alignItems: 'center',
-     marginTop: Spacing.md,
-   },
-   modalButtonText: {
-     fontSize: Typography.body,
-     fontWeight: Typography.weight.medium,
-   },
- });
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.md,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    padding: Spacing.md,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: Typography.title,
+    fontWeight: Typography.weight.bold,
+    marginBottom: Spacing.md,
+    textAlign: 'center',
+  },
+  formField: {
+    marginBottom: Spacing.md,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+  },
+  fieldLabel: {
+    fontSize: Typography.caption,
+    fontWeight: Typography.weight.medium,
+    marginBottom: Spacing.xs,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderRadius: Radii.sm,
+    padding: Spacing.sm,
+  },
+  pickerText: {
+    fontSize: Typography.body,
+  },
+  recipePicker: {
+    maxHeight: 200,
+  },
+  recipeOption: {
+    borderWidth: 1,
+    borderRadius: Radii.sm,
+    padding: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  recipeOptionText: {
+    fontSize: Typography.body,
+    fontWeight: Typography.weight.medium,
+  },
+  recipeOptionSubtext: {
+    fontSize: Typography.caption,
+    marginTop: 2,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderRadius: Radii.sm,
+    padding: Spacing.sm,
+    fontSize: Typography.body,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radii.sm,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: Typography.body,
+    fontWeight: Typography.weight.medium,
+  },
+});

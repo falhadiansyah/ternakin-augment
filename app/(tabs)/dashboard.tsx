@@ -43,40 +43,91 @@ export default function DashboardScreen() {
     ],
   });
 
+  const calculateDelta = (current: number, previous: number): string => {
+    if (previous === 0) {
+      return current > 0 ? '+100%' : '0%';
+    }
+    const change = ((current - previous) / previous) * 100;
+    const sign = change >= 0 ? '+' : '';
+    return `${sign}${change.toFixed(1)}%`;
+  };
+
+  const getDateRange = (period: 'today' | 'month' | 'year', isPrevious: boolean = false) => {
+    const now = new Date();
+    let start: Date, end: Date;
+
+    if (period === 'today') {
+      if (isPrevious) {
+        start = new Date(now);
+        start.setDate(start.getDate() - 1);
+        end = new Date(start);
+      } else {
+        start = new Date(now);
+        end = new Date(now);
+      }
+    } else if (period === 'month') {
+      if (isPrevious) {
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0);
+      } else {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      }
+    } else { // year
+      if (isPrevious) {
+        start = new Date(now.getFullYear() - 1, 0, 1);
+        end = new Date(now.getFullYear() - 1, 11, 31);
+      } else {
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+      }
+    }
+
+    return { start, end };
+  };
+
+  const filterTransactionsByDateRange = (transactions: any[], start: Date, end: Date) => {
+    return transactions.filter(tx => {
+      if (!tx.transaction_date) return false;
+      const txDate = new Date(tx.transaction_date);
+      return txDate >= start && txDate <= end;
+    });
+  };
+
   const loadData = useCallback(async () => {
     try {
       const [{ data: batches }, { data: balance }, { data: transactions }] = await Promise.all([
         listBatches(),
         getBalance(),
-        listTransactions(100), // Get more transactions for better calculations
+        listTransactions(1000), // Get more transactions for better calculations
       ]);
 
       if (batches && balance && transactions) {
         // Calculate total livestock
         const totalLivestock = batches.reduce((sum, batch) => sum + (batch.current_count || 0), 0);
 
-        // Filter transactions by date range
-        const now = new Date();
-        const filteredTransactions = transactions.filter(tx => {
-          if (!tx.transaction_date) return false;
-          const txDate = new Date(tx.transaction_date);
-          
-          switch (range) {
-            case 'today':
-              return txDate.toDateString() === now.toDateString();
-            case 'month':
-              return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
-            case 'year':
-              return txDate.getFullYear() === now.getFullYear();
-            default:
-              return true;
-          }
-        });
+        // Get current and previous date ranges
+        const currentRange = getDateRange(range, false);
+        const previousRange = getDateRange(range, true);
 
-        // Calculate financial metrics (debit = income, credit = expense)
-        const totalIncome = filteredTransactions.reduce((sum, tx) => sum + (tx.debit || 0), 0);
-        const totalExpenses = filteredTransactions.reduce((sum, tx) => sum + (tx.credit || 0), 0);
-        const netProfit = totalIncome - totalExpenses;
+        // Filter transactions for current and previous periods
+        const currentTransactions = filterTransactionsByDateRange(transactions, currentRange.start, currentRange.end);
+        const previousTransactions = filterTransactionsByDateRange(transactions, previousRange.start, previousRange.end);
+
+        // Calculate financial metrics for current period
+        const currentIncome = currentTransactions.reduce((sum, tx) => sum + (tx.debit || 0), 0);
+        const currentExpenses = currentTransactions.reduce((sum, tx) => sum + (tx.credit || 0), 0);
+        const currentNetProfit = currentIncome - currentExpenses;
+
+        // Calculate financial metrics for previous period
+        const previousIncome = previousTransactions.reduce((sum, tx) => sum + (tx.debit || 0), 0);
+        const previousExpenses = previousTransactions.reduce((sum, tx) => sum + (tx.credit || 0), 0);
+        const previousNetProfit = previousIncome - previousExpenses;
+
+        // Calculate deltas
+        const incomeDelta = calculateDelta(currentIncome, previousIncome);
+        const expensesDelta = calculateDelta(currentExpenses, previousExpenses);
+        const profitDelta = calculateDelta(currentNetProfit, previousNetProfit);
 
         // Generate chart data - group by week for month view, by month for year view
         const chartLabels: string[] = [];
@@ -88,10 +139,10 @@ export default function DashboardScreen() {
           const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
           weeks.forEach((week, index) => {
             chartLabels.push(week);
-            const weekStart = new Date(now.getFullYear(), now.getMonth(), index * 7);
-            const weekEnd = new Date(now.getFullYear(), now.getMonth(), (index + 1) * 7);
+            const weekStart = new Date(currentRange.start.getFullYear(), currentRange.start.getMonth(), index * 7);
+            const weekEnd = new Date(currentRange.start.getFullYear(), currentRange.start.getMonth(), (index + 1) * 7);
             
-            const weekIncome = filteredTransactions
+            const weekIncome = currentTransactions
               .filter(tx => {
                 if (!tx.transaction_date) return false;
                 const txDate = new Date(tx.transaction_date);
@@ -99,7 +150,7 @@ export default function DashboardScreen() {
               })
               .reduce((sum, tx) => sum + (tx.debit || 0), 0);
             
-            const weekExpense = filteredTransactions
+            const weekExpense = currentTransactions
               .filter(tx => {
                 if (!tx.transaction_date) return false;
                 const txDate = new Date(tx.transaction_date);
@@ -115,19 +166,19 @@ export default function DashboardScreen() {
           const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
           months.forEach((month, index) => {
             chartLabels.push(month);
-            const monthIncome = filteredTransactions
+            const monthIncome = currentTransactions
               .filter(tx => {
                 if (!tx.transaction_date) return false;
                 const txDate = new Date(tx.transaction_date);
-                return txDate.getMonth() === index && txDate.getFullYear() === now.getFullYear();
+                return txDate.getMonth() === index && txDate.getFullYear() === currentRange.start.getFullYear();
               })
               .reduce((sum, tx) => sum + (tx.debit || 0), 0);
             
-            const monthExpense = filteredTransactions
+            const monthExpense = currentTransactions
               .filter(tx => {
                 if (!tx.transaction_date) return false;
                 const txDate = new Date(tx.transaction_date);
-                return txDate.getMonth() === index && txDate.getFullYear() === now.getFullYear();
+                return txDate.getMonth() === index && txDate.getFullYear() === currentRange.start.getFullYear();
               })
               .reduce((sum, tx) => sum + (tx.credit || 0), 0);
             
@@ -137,8 +188,8 @@ export default function DashboardScreen() {
         } else {
           // Today - show hourly data or just today's total
           chartLabels.push('Today');
-          incomeData.push(totalIncome);
-          expenseData.push(totalExpenses);
+          incomeData.push(currentIncome);
+          expenseData.push(currentExpenses);
         }
 
         setChartData({
@@ -158,10 +209,10 @@ export default function DashboardScreen() {
         });
 
         setMetrics({
-          totalLivestock: { value: totalLivestock, delta: '+0%' }, // TODO: Calculate delta
-          totalExpenses: { value: totalExpenses, delta: '+0%' },
-          totalIncome: { value: totalIncome, delta: '+0%' },
-          netProfit: { value: netProfit, delta: netProfit >= 0 ? '+0%' : '-0%' },
+          totalLivestock: { value: totalLivestock, delta: '+0%' }, // TODO: Calculate livestock delta if needed
+          totalExpenses: { value: currentExpenses, delta: expensesDelta },
+          totalIncome: { value: currentIncome, delta: incomeDelta },
+          netProfit: { value: currentNetProfit, delta: profitDelta },
         });
       }
       setError(null);
@@ -200,17 +251,23 @@ export default function DashboardScreen() {
                   borderColor: range === r ? colors.primary : colors.border,
                 },
               ]}
-              activeOpacity={0.8}
               onPress={() => setRange(r)}
             >
-              <Text style={{ color: range === r ? 'white' : colors.text, fontWeight: Typography.weight.medium, fontSize: Typography.caption }}>
-                {r === 'today' ? 'Today' : r === 'month' ? 'This Month' : 'This Year'}
+              <Text
+                style={[
+                  styles.filterChipText,
+                  {
+                    color: range === r ? '#fff' : colors.text,
+                    fontWeight: range === r ? Typography.weight.bold : Typography.weight.medium,
+                  },
+                ]}
+              >
+                {r.charAt(0).toUpperCase() + r.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* KPI Grid */}
         <View style={styles.content}>
           {loading && (
             <View style={{ padding: Spacing.md, alignItems: 'center' }}>
@@ -218,53 +275,49 @@ export default function DashboardScreen() {
             </View>
           )}
           {error && (
-            <Text style={{ color: colors.error, marginBottom: Spacing.sm, textAlign: 'center' }}>
-              Failed to load: {error}
-            </Text>
+            <Text style={{ color: colors.error, marginBottom: Spacing.sm }}>Failed to load: {error}</Text>
           )}
-          <View style={styles.grid}>
+
+          {/* Stats Grid */}
+          <View style={styles.statsGrid}>
             <StatCard
               title="Total Livestock"
-              value={metrics.totalLivestock.value.toString()}
+              value={metrics.totalLivestock.value.toLocaleString()}
               delta={metrics.totalLivestock.delta}
-              icon="paw-outline"
-              colors={colors}
-              shadow={shadow}
-            />
-            <StatCard
-              title="Total Expenses"
-              value={`$${(metrics.totalExpenses.value / 1000).toFixed(1)}k`}
-              delta={metrics.totalExpenses.delta}
-              icon="card-outline"
+              icon="paw"
               colors={colors}
               shadow={shadow}
             />
             <StatCard
               title="Total Income"
-              value={`$${(metrics.totalIncome.value / 1000).toFixed(1)}k`}
+              value={`$${metrics.totalIncome.value.toLocaleString()}`}
               delta={metrics.totalIncome.delta}
-              icon="trending-up-outline"
+              icon="trending-up"
+              colors={colors}
+              shadow={shadow}
+            />
+            <StatCard
+              title="Total Expenses"
+              value={`$${metrics.totalExpenses.value.toLocaleString()}`}
+              delta={metrics.totalExpenses.delta}
+              icon="trending-down"
               colors={colors}
               shadow={shadow}
             />
             <StatCard
               title="Net Profit"
-              value={`$${(metrics.netProfit.value / 1000).toFixed(1)}k`}
+              value={`$${metrics.netProfit.value.toLocaleString()}`}
               delta={metrics.netProfit.delta}
-              icon="wallet-outline"
+              icon="wallet"
               colors={colors}
               shadow={shadow}
             />
           </View>
 
-          {/* Income vs Expenses */}
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, shadow, { flexBasis: '100%' }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Income vs Expenses</Text>
-            <View style={styles.legendRow}>
-              <LegendDot color={colors.success} label="Income" textColor={colors.text} />
-              <LegendDot color={colors.error} label="Expenses" textColor={colors.text} />
-            </View>
-            <LineChart data={chartData} height={220} showLegend={false} />
+          {/* Chart */}
+          <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
+            <Text style={[styles.chartTitle, { color: colors.text }]}>Financial Overview</Text>
+            <LineChart data={chartData} height={220} showGrid={true} showLegend={true} />
           </View>
         </View>
       </ScrollView>
@@ -287,19 +340,20 @@ function StatCard({
   colors: typeof Colors.light;
   shadow: any;
 }) {
+  const isPositive = delta.startsWith('+') && delta !== '+0%';
+  const isNegative = delta.startsWith('-');
+  const deltaColor = isPositive ? colors.success : isNegative ? colors.error : colors.icon;
+
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
+    <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
       <View style={styles.statHeader}>
-        <Ionicons name={icon} size={18} color={colors.icon} />
-        <Text style={[styles.cardSubtitle, { color: colors.icon, marginLeft: Spacing.xs }]}>{title}</Text>
-      </View>
-      <View style={styles.statRow}>
-        <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-        <View style={styles.deltaRow}>
-          <Ionicons name="arrow-up" size={14} color={colors.success} />
-          <Text style={[styles.deltaText, { color: colors.success }]}>{delta}</Text>
+        <View style={[styles.statIcon, { backgroundColor: colors.secondary }]}>
+          <Ionicons name={icon} size={20} color={colors.primary} />
         </View>
+        <Text style={[styles.statDelta, { color: deltaColor }]}>{delta}</Text>
       </View>
+      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.statTitle, { color: colors.icon }]}>{title}</Text>
     </View>
   );
 }
@@ -335,6 +389,61 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  filterChipText: {
+    fontSize: Typography.caption,
+    fontWeight: Typography.weight.medium,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: Spacing.sm as any,
+    marginBottom: Spacing.sm,
+  },
+  statCard: {
+    padding: Spacing.md,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    width: '48%', // Two columns
+    alignItems: 'center',
+  },
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.xs,
+  },
+  statDelta: {
+    fontSize: Typography.caption,
+    fontWeight: Typography.weight.medium,
+  },
+  statValue: {
+    fontSize: Typography.display,
+    fontWeight: Typography.weight.extrabold,
+    marginBottom: Spacing.xs,
+  },
+  statTitle: {
+    fontSize: Typography.caption,
+    textAlign: 'center',
+  },
+  chartCard: {
+    padding: Spacing.md,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    marginBottom: Spacing.sm,
+  },
+  chartTitle: {
+    fontSize: Typography.title,
+    fontWeight: Typography.weight.bold,
+    marginBottom: Spacing.sm,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -349,9 +458,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: Typography.title, fontWeight: Typography.weight.bold, marginBottom: Spacing.sm },
   cardSubtitle: { fontSize: Typography.caption },
-  statHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.xs },
   statRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  statValue: { fontSize: Typography.display, fontWeight: Typography.weight.extrabold },
   deltaRow: { flexDirection: 'row', alignItems: 'center' },
   deltaText: { marginLeft: 4, fontWeight: Typography.weight.medium, fontSize: Typography.caption },
   legendRow: { flexDirection: 'row', gap: Spacing.md as any, marginBottom: Spacing.xs },

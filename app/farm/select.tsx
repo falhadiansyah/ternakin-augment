@@ -46,12 +46,16 @@ export default function FarmSelectScreen() {
   async function createFarm() {
     if (!validNewFarm) return;
     try {
+      // Get current user's email
+      const { data: userRes } = await supabase.auth.getUser();
+      const userEmail = userRes.user?.email;
+      
       // RPC handles insert + assignment with proper auth context
       const { data: farm, error } = await supabase.rpc('create_farm_and_assign', {
         p_name: newFarm.name.trim(),
         p_address: newFarm.address.trim() || null,
         p_phone: newFarm.phone.trim() || null,
-        p_email: null,
+        p_email: userEmail || null, // Auto-populate with current user's email
       });
       if (error) throw error;
       router.replace('/(tabs)/dashboard');

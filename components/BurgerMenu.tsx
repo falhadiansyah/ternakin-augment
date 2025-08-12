@@ -33,7 +33,24 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
     setLanguage(newLanguage);
   };
 
-  const menuItems = [
+  interface MenuItem {
+    id: string;
+    title: string;
+    icon: string;
+    onPress: () => void;
+    hasSubmenu?: boolean;
+    submenu?: Array<{
+      id: string;
+      title: string;
+      icon: string;
+      onPress: () => void;
+      selected: boolean;
+    }>;
+    subtitle?: string;
+    danger?: boolean;
+  }
+
+  const menuItems: MenuItem[] = [
     {
       id: 'theme',
       title: t('settings.theme'),
@@ -62,7 +79,13 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
         router.push('/profile');
       },
     },
-    { id: 'logout', title: t('auth.logout'), icon: 'log-out', onPress: handleLogout, danger: true },
+    {
+      id: 'logout',
+      title: t('auth.logout'),
+      icon: 'log-out',
+      onPress: handleLogout,
+      danger: true,
+    },
   ];
 
   const slideX = useRef(new Animated.Value(-300)).current;

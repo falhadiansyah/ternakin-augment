@@ -5,7 +5,8 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
-import { createFeedingPlan, getGrowthRowWithFallback, getRecipeItems, listBatches, listFeedingPlan, listRecipes, recomputeAndUpdateBatchAges, type BatchRow, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
+import { createFeedingPlan, deleteRecipe, getGrowthRowWithFallback, getRecipeItems, listBatches, listFeedingPlan, listRecipes, recomputeAndUpdateBatchAges, type BatchRow, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
+import { showToast } from '@/utils/toast';
 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -289,12 +290,34 @@ export default function FeedingScreen() {
                 <View key={r.id} style={[styles.recipeCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
                   <View style={styles.recipeHeader}>
                     <Text style={[styles.recipeTitle, { color: colors.text }]}>{r.name}</Text>
-                    <TouchableOpacity onPress={() => {
-                      const { router } = require('expo-router');
-                      router.push({ pathname: '/recipe/form', params: { id: r.id } });
-                    }}>
-                      <Ionicons name="create-outline" size={18} color={colors.icon} />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any }}>
+                      <TouchableOpacity onPress={() => {
+                        const { router } = require('expo-router');
+                        router.push({ pathname: '/recipe/form', params: { id: r.id } });
+                      }}>
+                        <Ionicons name="create-outline" size={18} color={colors.icon} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => {
+                        Alert.alert(
+                          'Confirm Delete',
+                          `Are you sure you want to delete "${r.name}"? This action cannot be undone.`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: async () => {
+                                await deleteRecipe(r.id);
+                                showToast('Recipe deleted', 'success');
+                                await load();
+                              },
+                            },
+                          ],
+                        );
+                      }}>
+                        <Ionicons name="trash-outline" size={18} color={colors.error} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                   <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Type: {r.type} • Used: {r.used_for}</Text>
                   {r.total_price_kg != null && (
