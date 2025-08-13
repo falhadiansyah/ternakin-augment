@@ -26,21 +26,19 @@ export default function ProfileScreen() {
   const handleLogout = async () => {
     Alert.alert(
       t('auth.logout'),
-      'Are you sure you want to logout?',
+      t('profile.confirm_logout'),
       [
-        {
-          text: t('common.cancel'),
-          style: 'cancel',
-        },
+        { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('auth.logout'),
           style: 'destructive',
           onPress: async () => {
             try {
-              await signOut();
+              const { error } = await signOut();
+              if (error) throw error;
               router.replace('/auth/login');
             } catch (error: any) {
-              Alert.alert(t('common.error'), error.message || 'Failed to logout');
+              Alert.alert(t('common.error'), error?.message || 'Failed to logout');
             }
           },
         },
@@ -136,12 +134,7 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-            <View style={{ alignItems: 'flex-end', marginTop: 16 }}>
-              <TouchableOpacity onPress={handleLogout} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
-                <Ionicons name="log-out" size={16} color={colors.text} />
-                <Text style={{ color: colors.text }}>{t('auth.logout')}</Text>
-              </TouchableOpacity>
-            </View>
+
 
         </View>
       </ScrollView>

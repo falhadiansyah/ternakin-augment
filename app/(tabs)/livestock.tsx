@@ -7,6 +7,7 @@ import { Typography } from '@/constants/Typography';
 import { createTransaction, getGrowthRowWithFallback, listBatches, recomputeAndUpdateBatchAges, type BatchRow } from '@/lib/data';
 import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,6 +54,14 @@ export default function LivestockScreen() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Auto-refetch when returning to this screen
+  useFocusEffect(
+    React.useCallback(() => {
+      load();
+      return undefined;
+    }, [load])
+  );
 
   useEffect(() => {
     // After batches are loaded, fetch expected weights and care data per batch

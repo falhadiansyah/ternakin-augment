@@ -12,6 +12,7 @@ import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -85,6 +86,14 @@ export default function FeedingScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Auto-refetch when returning to this screen
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      return undefined;
+    }, [load])
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await load();
@@ -154,7 +163,7 @@ export default function FeedingScreen() {
                     <Text style={[styles.itemTitle, { color: colors.text }]}>{b.name}</Text>
                     <View style={styles.itemMetaRow}>
                       <Ionicons name="calendar-outline" size={14} color={colors.icon} />
-                      <Text style={[styles.itemMeta, { color: colors.icon }]}>{t('livestock.age_weeks', { weeks: b.current_age_weeks || 0 })}</Text>
+                      <Text style={[styles.itemMeta, { color: colors.icon }]}>{`${t('livestock.age_weeks')}: ${b.current_age_weeks || 0}`}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
                       <View style={{ flex: 1 }}>

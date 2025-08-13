@@ -45,7 +45,7 @@ export default function FinanceFormScreen() {
           setIsCredit(credit);
           setAmount(String(credit ? tx.credit : tx.debit || ''));
           setDate(tx.transaction_date ? new Date(tx.transaction_date) : new Date());
-          setType((tx.debit || 0) > 0 ? 'income' : 'expense');
+          setType((tx.debit || 0) > 0 ? 'income' : 'expenses');
           setNotes(tx.notes || '');
           setBatchId(tx.batches_id || null);
         }

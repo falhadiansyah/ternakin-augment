@@ -8,6 +8,7 @@ import { getBalance, listTransactions, type CashbookRow } from '@/lib/data';
 import { formatIDR, formatIDRSigned } from '@/utils/currency';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -73,6 +74,14 @@ export default function FinancialScreen() {
   }, [transactions, filterDate, filterEndDate]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-refetch when returning to this screen
+  useFocusEffect(
+    React.useCallback(() => {
+      load();
+      return undefined;
+    }, [load])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
