@@ -219,6 +219,17 @@ export default function LivestockScreen() {
     return '-';
   };
 
+  const formatWeightGr = (value?: number | null) => {
+    if (value === null || value === undefined) return '-';
+    return `${value} gr`;
+  };
+
+
+  const hasVaccineValue = (value?: string | null) => {
+    const s = (value || '').trim();
+    return s.length > 0 && s !== '-';
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title={t('nav.livestock')} />
@@ -263,74 +274,95 @@ export default function LivestockScreen() {
               {/* Entry details */}
               <View style={styles.entryDetails}>
                 <View style={styles.entryItem}>
-                  <Ionicons name="calendar" size={14} color={colors.icon} />
+                  <Ionicons name="calendar-outline" size={14} color={colors.icon} />
                   <Text style={[styles.entryText, { color: colors.icon }]}>
                     Entry: {formatDate(b.entry_date)}
                   </Text>
                 </View>
                 <View style={styles.entryItem}>
-                  <Ionicons name="business" size={14} color={colors.icon} />
+                  <Ionicons name="business-outline" size={14} color={colors.icon} />
                   <Text style={[styles.entryText, { color: colors.icon }]}>
                     Source: {b.source || '-'}
                   </Text>
                 </View>
               </View>
 
-              {/* Key metrics - 3 columns with icons */}
-              <View style={styles.keyMetrics}>
-                <View style={styles.metricColumn}>
-                  <View style={styles.metricWithIcon}>
-                    <Ionicons name="people" size={14} color={colors.icon} />
-                    <Text style={[styles.metricValue, { color: colors.text }]}>
-                      {(b.current_count || 0)}
+              {/* Metrics grid - 2x2 tiles: Total, Age, Temperature, Lighting */}
+              <View style={styles.metricGrid}>
+                <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
+                  <Ionicons name="people" size={14} color={colors.icon} />
+                  <Text style={[styles.metricTileValue, { color: colors.text }]}>{b.current_count || 0}</Text>
+                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>Total</Text>
+                </View>
+
+                <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
+                  <Ionicons name="time" size={14} color={colors.icon} />
+                  <Text style={[styles.metricTileValue, { color: colors.text }]}>
+                    {b.current_age_days || 0}
+                  </Text>
+                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>Days ({b.current_age_days || 0} Weeks)</Text>
+                </View>
+
+                <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
+                  <Ionicons name="thermometer" size={14} color={colors.icon} />
+                  <Text style={[styles.metricTileValue, { color: colors.text }]}>
+                    {growthByBatch[b.id]?.temperature ? `${growthByBatch[b.id].temperature}°C` : '-'}
+                  </Text>
+                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>Temp</Text>
+                </View>
+
+                <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
+                  <Ionicons name="sunny" size={14} color={colors.icon} />
+                  <Text style={[styles.metricTileValue, { color: colors.text }]}>
+                    {growthByBatch[b.id]?.lighting || '-'}
+                  </Text>
+                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>Lighting</Text>
+                </View>
+              </View>
+
+              {/* Weight row - 2 columns: Male / Female with barbell icons */}
+              <View style={styles.weightRow}>
+                <View style={[styles.weightCol, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                  <View style={styles.weightRight}>
+                    <Ionicons name="scale" size={14} color={colors.icon} />
+                    <Text style={[styles.weightLabel, { color: colors.icon }]}>Male</Text>
+                  </View>
+                  <View style={styles.weightRight}>
+                    <Text style={[styles.weightValue, { color: colors.text }]}>
+                      {formatWeightGr(growthByBatch[b.id]?.weight_male)}
                     </Text>
                   </View>
                 </View>
-                <View style={styles.metricColumn}>
-                  <View style={styles.metricWithIcon}>
-                    <Ionicons name="time" size={14} color={colors.icon} />
-                    <Text style={[styles.metricValue, { color: colors.text }]}>
-                      {formatAge(b.current_age_days || 0, b.current_age_weeks || 0)}
-                    </Text>
+                <View style={[styles.weightCol, { borderColor: colors.border, backgroundColor: colors.card }]}>
+                  <View style={styles.weightRight}>
+                    <Ionicons name="scale" size={14} color={colors.icon} />
+                    <Text style={[styles.weightLabel, { color: colors.icon }]}>Female</Text>
                   </View>
-                </View>
-                <View style={styles.metricColumn}>
-                  <View style={styles.metricWithIcon}>
-                    <Ionicons name="barbell" size={14} color={colors.icon} />
-                    <Text style={[styles.metricValue, { color: colors.text }]}>
-                      {formatWeight(growthByBatch[b.id]?.weight_male, growthByBatch[b.id]?.weight_female)}
+                  <View style={styles.weightRight}>
+                    <Text style={[styles.weightValue, { color: colors.text }]}>
+                      {formatWeightGr(growthByBatch[b.id]?.weight_female)}
                     </Text>
                   </View>
                 </View>
               </View>
 
-              {/* Additional metrics - 3 columns */}
-              <View style={styles.additionalMetrics}>
-                <View style={styles.metricColumn}>
-                  <View style={styles.metricWithIcon}>
-                    <Ionicons name="thermometer" size={14} color={colors.icon} />
-                    <Text style={[styles.metricText, { color: colors.icon }]}>
-                      {growthByBatch[b.id]?.temperature ? `${growthByBatch[b.id].temperature}°C` : '-'}
-                    </Text>
-                  </View>
+              {/* Vaccine/Medicine banner - only when there is actual data */}
+              {hasVaccineValue(growthByBatch[b.id]?.vaccine) && (
+                <View
+                  style={[
+                    styles.vaccineBox,
+                    {
+                      borderColor: colors.warning,
+                      backgroundColor: isDark ? 'rgba(247,144,9,0.10)' : 'rgba(247,144,9,0.08)'
+                    }
+                  ]}
+                >
+                  <Ionicons name="medical-outline" size={14} color={colors.warning} />
+                  <Text style={[styles.vaccineText, { color: colors.icon }]}>
+                    {(growthByBatch[b.id]?.vaccine || '').trim()}
+                  </Text>
                 </View>
-                <View style={styles.metricColumn}>
-                  <View style={styles.metricWithIcon}>
-                    <Ionicons name="sunny" size={14} color={colors.icon} />
-                    <Text style={[styles.metricText, { color: colors.icon }]}>
-                      {growthByBatch[b.id]?.lighting || '-'}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.metricColumn}>
-                  <View style={styles.metricWithIcon}>
-                    <Ionicons name="medical" size={14} color={colors.icon} />
-                    <Text style={[styles.metricText, { color: colors.icon }]}>
-                      {growthByBatch[b.id]?.vaccine || '-'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              )}
 
               {/* Action buttons */}
               <View style={[styles.actionButtons, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: Spacing.sm }]}>
@@ -517,6 +549,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between'
   },
+  metricGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm as any,
+    marginBottom: Spacing.sm
+  },
+  metricTile: {
+    flexBasis: '48%',
+    borderWidth: 1,
+    borderRadius: Radii.sm,
+    padding: Spacing.sm,
+    alignItems: 'center',
+    gap: Spacing.xs as any
+  },
+  metricTileValue: {
+    fontSize: Typography.body,
+    fontWeight: Typography.weight.medium
+  },
+  metricTileLabel: {
+    fontSize: Typography.caption
+  },
+  weightRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm as any,
+    marginTop: Spacing.sm
+  },
+  weightCol: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: Radii.sm,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  weightLabel: {
+    fontSize: Typography.caption,
+    fontWeight: Typography.weight.medium
+  },
+  weightRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs as any
+  },
+  weightValue: {
+    fontSize: Typography.body,
+    fontWeight: Typography.weight.medium
+  },
   metricColumn: {
     flex: 1,
     alignItems: 'center',
@@ -617,5 +698,19 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: Typography.body,
     fontWeight: Typography.weight.medium,
+  },
+  vaccineBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs as any,
+    borderWidth: 1,
+    borderRadius: Radii.sm,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  vaccineText: {
+    fontSize: Typography.caption,
+    flex: 1,
   },
 });
