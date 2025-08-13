@@ -1,0 +1,1 @@
+Design note: Ternakin logo asset placeholder. The final optimized image should be placed as assets/images/ternakin-logo.png (prefer 768x768 or 1024x1024), and optionally assets/images/ternakin-logo.webp for Android. Keep under ~150KB. 

@@ -33,14 +33,14 @@ const translations = {
     'auth.valid_email_required': 'Please enter a valid email address',
     'auth.otp_required': 'OTP is required',
     'auth.otp_must_be_6_digits': 'OTP must be 6 digits',
-    
+
     // Navigation
     'nav.dashboard': 'Dashboard',
     'nav.livestock': 'Livestock',
     'nav.feeding': 'Feeding',
     'nav.financial': 'Financial',
     'nav.profile': 'Profile',
-    
+
     // Dashboard
     'dashboard.total_livestock': 'Total Livestock',
     'dashboard.total_income': 'Total Income',
@@ -50,12 +50,17 @@ const translations = {
     'dashboard.today': 'Today',
     'dashboard.this_month': 'This Month',
     'dashboard.this_year': 'This Year',
-    
+
     // Livestock
     'livestock.add_new_batch': 'Add New Batch',
     'livestock.current_count': 'Current Count',
     'livestock.starting_count': 'Starting Count',
     'livestock.total_cost': 'Total Cost',
+    'livestock.total': 'Total',
+    'livestock.days_weeks': 'Days ({days} Weeks)',
+    'livestock.temperature': 'Temp',
+    'livestock.lighting': 'Lighting',
+    'livestock.age_weeks': 'Age (Weeks)',
     'livestock.expected_at_weeks': 'Expected at {weeks} weeks:',
     'livestock.male_weight': 'Male: {weight}g',
     'livestock.female_weight': 'Female: {weight}g',
@@ -76,7 +81,7 @@ const translations = {
     'livestock.cannot_reduce_below_zero': 'Cannot reduce stock below 0',
     'livestock.stock_adjustment_saved': 'Stock adjustment saved successfully',
     'livestock.failed_to_save': 'Failed to save stock adjustment',
-    
+
     // Feeding
     'feeding.schedule': 'Schedule',
     'feeding.recipes': 'Recipes',
@@ -97,15 +102,19 @@ const translations = {
     'feeding.fill_required_fields': 'Please fill in all required fields (Batch and Recipe)',
     'feeding.no_feeding_plans': 'No Feeding Plans',
     'feeding.add_first_plan': 'Add your first feeding plan below',
+'feeding.plans_title': 'Feeding Plans',
     'feeding.new_feeding_plan': 'New Feeding Plan',
     'feeding.batch': 'Batch',
     'feeding.recipe': 'Recipe',
     'feeding.from_week_label': 'From Week',
     'feeding.to_week_label': 'To Week',
     'feeding.ingredients': 'Ingredients:',
+'feeding.feed_total': 'Feed total',
+'feeding.water_total': 'Water total',
+'recipe.add_recipe': 'Add Recipe',
     'feeding.more_ingredients': '+{count} more ingredients',
     'feeding.select_recipe_title': 'Select Recipe',
-    
+
     // Financial
     'financial.total_income': 'Total Income',
     'financial.total_expenses': 'Total Expenses',
@@ -116,7 +125,7 @@ const translations = {
     'financial.to_date': 'To Date',
     'financial.clear': 'Clear',
     'financial.transaction': 'Transaction',
-    
+
     // Profile
     'profile.farm_details': 'Farm Details',
     'profile.settings': 'Settings',
@@ -142,7 +151,7 @@ const translations = {
     'profile.farm_details_error': 'Farm details could not be loaded. Please try again.',
     'profile.loading_farm_details': 'Loading farm details...',
     'profile.farm_management_system': 'Farm Management System',
-    
+
     // Farm Selection
     'farm.create_new_farm': 'Create New Farm',
     'farm.farm_name': 'Farm Name',
@@ -157,7 +166,7 @@ const translations = {
     'farm.farm_name_required': 'Farm name already in use',
     'farm.failed_to_create': 'Failed to create farm',
     'farm.failed_to_join': 'Failed to join farm',
-    
+
     // Settings
     'settings.theme': 'Theme',
     'settings.language': 'Language',
@@ -167,7 +176,7 @@ const translations = {
     'settings.english': 'English',
     'settings.indonesian': 'Indonesian',
     'settings.notifications': 'Notifications',
-    
+
     // Common
     'common.loading': 'Loading...',
     'common.error': 'Error',
@@ -184,7 +193,7 @@ const translations = {
     'common.enter_valid_week_range': 'Please enter valid week range',
     'common.week_range_invalid': 'Week range is invalid',
     'common.please_enter_valid_quantity': 'Please enter a valid quantity',
-    
+
     // App
     'app.name': 'Ternakin',
     'app.tagline': 'Livestock Management Made Simple',
@@ -205,14 +214,14 @@ const translations = {
     'auth.verify_email': 'Verifikasi Email Anda',
     'auth.otp_sent_to': 'Kami mengirim kode 6 digit ke',
     'auth.terms_disclaimer': 'Dengan melanjutkan, Anda menyetujui Ketentuan Layanan dan Kebijakan Privasi kami',
-    
+
     // Navigation
     'nav.dashboard': 'Dasbor',
     'nav.livestock': 'Ternak',
     'nav.feeding': 'Pakan',
     'nav.financial': 'Keuangan',
     'nav.profile': 'Profil',
-    
+
     // Dashboard
     'dashboard.total_livestock': 'Total Ternak',
     'dashboard.total_income': 'Total Pendapatan',
@@ -222,12 +231,17 @@ const translations = {
     'dashboard.today': 'Hari Ini',
     'dashboard.this_month': 'Bulan Ini',
     'dashboard.this_year': 'Tahun Ini',
-    
+
     // Livestock
     'livestock.add_new_batch': 'Tambah Batch Baru',
     'livestock.current_count': 'Jumlah Saat Ini',
     'livestock.starting_count': 'Jumlah Awal',
     'livestock.total_cost': 'Total Biaya',
+    'livestock.total': 'Total',
+    'livestock.days_weeks': 'Hari ({days} Minggu)',
+    'livestock.temperature': 'Suhu',
+    'livestock.lighting': 'Pencahayaan',
+    'livestock.age_weeks': 'Usia (Minggu)',
     'livestock.expected_at_weeks': 'Perkiraan pada {weeks} minggu:',
     'livestock.male_weight': 'Jantan: {weight}g',
     'livestock.female_weight': 'Betina: {weight}g',
@@ -248,7 +262,7 @@ const translations = {
     'livestock.cannot_reduce_below_zero': 'Tidak dapat mengurangi stok di bawah 0',
     'livestock.stock_adjustment_saved': 'Penyesuaian stok berhasil disimpan',
     'livestock.failed_to_save': 'Gagal menyimpan penyesuaian stok',
-    
+
     // Feeding
     'feeding.schedule': 'Jadwal',
     'feeding.recipes': 'Resep',
@@ -270,14 +284,19 @@ const translations = {
     'feeding.no_feeding_plans': 'Tidak Ada Jadwal Pakan',
     'feeding.add_first_plan': 'Tambahkan jadwal pakan pertama Anda di bawah',
     'feeding.new_feeding_plan': 'Jadwal Pakan Baru',
+    'feeding.plans_title': 'Rencana Pakan',
+
     'feeding.batch': 'Batch',
     'feeding.recipe': 'Resep',
     'feeding.from_week_label': 'Dari Minggu',
     'feeding.to_week_label': 'Sampai Minggu',
     'feeding.ingredients': 'Bahan:',
+'feeding.feed_total': 'Total pakan',
+'feeding.water_total': 'Total air',
+'recipe.add_recipe': 'Tambah Resep',
     'feeding.more_ingredients': '+{count} bahan lainnya',
     'feeding.select_recipe_title': 'Pilih Resep',
-    
+
     // Financial
     'financial.total_income': 'Total Pendapatan',
     'financial.total_expenses': 'Total Pengeluaran',
@@ -288,7 +307,7 @@ const translations = {
     'financial.to_date': 'Sampai Tanggal',
     'financial.clear': 'Bersihkan',
     'financial.transaction': 'Transaksi',
-    
+
     // Profile
     'profile.farm_details': 'Detail Peternakan',
     'profile.settings': 'Pengaturan',
@@ -314,7 +333,7 @@ const translations = {
     'profile.farm_details_error': 'Detail peternakan tidak dapat dimuat. Silakan coba lagi.',
     'profile.loading_farm_details': 'Memuat detail peternakan...',
     'profile.farm_management_system': 'Sistem Manajemen Peternakan',
-    
+
     // Farm Selection
     'farm.create_new_farm': 'Buat Peternakan Baru',
     'farm.farm_name': 'Nama Peternakan',
@@ -329,7 +348,7 @@ const translations = {
     'farm.farm_name_required': 'Nama peternakan sudah digunakan',
     'farm.failed_to_create': 'Gagal membuat peternakan',
     'farm.failed_to_join': 'Gagal bergabung dengan peternakan',
-    
+
     // Settings
     'settings.theme': 'Tema',
     'settings.language': 'Bahasa',
@@ -339,7 +358,7 @@ const translations = {
     'settings.english': 'Bahasa Inggris',
     'settings.indonesian': 'Bahasa Indonesia',
     'settings.notifications': 'Notifikasi',
-    
+
     // Common
     'common.loading': 'Memuat...',
     'common.error': 'Error',
@@ -356,7 +375,7 @@ const translations = {
     'common.enter_valid_week_range': 'Silakan masukkan rentang minggu yang valid',
     'common.week_range_invalid': 'Rentang minggu tidak valid',
     'common.please_enter_valid_quantity': 'Silakan masukkan kuantitas yang valid',
-    
+
     // App
     'app.name': 'Ternakin',
     'app.tagline': 'Simple Livestock Management',
@@ -384,14 +403,14 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const t = (key: string, params?: Record<string, string | number>): string => {
     let translation = translations[language][key as keyof typeof translations[typeof language]] || key;
-    
+
     // Handle interpolation for dynamic values
     if (params) {
       Object.entries(params).forEach(([param, value]) => {
         translation = translation.replace(new RegExp(`{${param}}`, 'g'), String(value));
       });
     }
-    
+
     return translation;
   };
 

@@ -14,8 +14,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { showToast } from '@/utils/toast';
 
 
-const animals = ['chicken','duck','bird','rabbit','fish','sheep','cattle','cow'] as const;
-const breeds = ['kub_2','elba','mardi'] as const;
+const animals = ['chicken'] as const; //,'duck','bird','rabbit','fish','sheep','cattle','cow'
+const breeds = ['kub_2','broiler','layer'] as const;
 
 export default function BatchFormScreen() {
   const router = useRouter();
@@ -98,7 +98,7 @@ export default function BatchFormScreen() {
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','bottom']}> 
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','bottom']}>
         <Header title={isEdit ? 'Edit Batch' : 'Add Batch'} showBackButton onBackPress={() => router.back()} />
         <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl + insets.bottom }}>
           <LabeledInput label="Name" error={errors.name}>

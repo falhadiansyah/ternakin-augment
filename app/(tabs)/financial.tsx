@@ -5,6 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { getBalance, listTransactions, type CashbookRow } from '@/lib/data';
+import { formatIDR, formatIDRSigned } from '@/utils/currency';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -42,31 +43,31 @@ export default function FinancialScreen() {
   const filteredTransactions = useMemo(() => {
     if (!transactions) return transactions;
     if (!filterDate && !filterEndDate) return transactions;
-    
+
     return transactions.filter(tx => {
       if (!tx.transaction_date) return false;
       const txDate = new Date(tx.transaction_date);
-      
+
       if (filterDate && filterEndDate) {
         // Date range filter - make it inclusive and handle time zones properly
         const startDate = new Date(filterDate);
         startDate.setHours(0, 0, 0, 0); // Start of day
-        
+
         const endDate = new Date(filterEndDate);
         endDate.setHours(23, 59, 59, 999); // End of day
-        
+
         return txDate >= startDate && txDate <= endDate;
       } else if (filterDate) {
         // Single date filter - compare only the date part
         const filterDateOnly = new Date(filterDate);
         filterDateOnly.setHours(0, 0, 0, 0);
-        
+
         const txDateOnly = new Date(txDate);
         txDateOnly.setHours(0, 0, 0, 0);
-        
+
         return txDateOnly.getTime() === filterDateOnly.getTime();
       }
-      
+
       return true;
     });
   }, [transactions, filterDate, filterEndDate]);
@@ -97,64 +98,66 @@ export default function FinancialScreen() {
           <View style={styles.overviewGrid}>
             <View style={[styles.overviewCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
               <View style={styles.overviewIconContainer}>
+                <Ionicons name="wallet" size={24} color={overview.currentBalance >= 0 ? colors.primary : colors.error} />
+              </View>
+              <Text style={[styles.overviewLabel, { color: colors.icon }]}>{t('financial.net_balance')}</Text>
+              <Text style={[styles.overviewValue, { color: overview.currentBalance >= 0 ? colors.primary : colors.primary }]}>
+                {formatIDR(overview.currentBalance || 0)}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.overviewGrid}>
+            <View style={[styles.overviewCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
+              <View style={styles.overviewIconContainer}>
                 <Ionicons name="trending-up" size={24} color={colors.success} />
               </View>
-              <Text style={[styles.overviewLabel, { color: colors.icon }]}>Total Income</Text>
-              <Text style={[styles.overviewValue, { color: colors.success }]}>${(overview.totalIncome || 0).toLocaleString()}</Text>
+              <Text style={[styles.overviewLabel, { color: colors.icon }]}>{t('financial.total_income')}</Text>
+              <Text style={[styles.overviewValue, { color: colors.success }]}>{formatIDR(overview.totalIncome || 0)}</Text>
             </View>
             <View style={[styles.overviewCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
               <View style={styles.overviewIconContainer}>
                 <Ionicons name="trending-down" size={24} color={colors.error} />
               </View>
-              <Text style={[styles.overviewLabel, { color: colors.icon }]}>Total Expenses</Text>
-              <Text style={[styles.overviewValue, { color: colors.error }]}>${(overview.totalExpenses || 0).toLocaleString()}</Text>
-            </View>
-            <View style={[styles.overviewCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
-              <View style={styles.overviewIconContainer}>
-                <Ionicons name="wallet" size={24} color={overview.currentBalance >= 0 ? colors.success : colors.error} />
-              </View>
-              <Text style={[styles.overviewLabel, { color: colors.icon }]}>Net Balance</Text>
-              <Text style={[styles.overviewValue, { color: overview.currentBalance >= 0 ? colors.success : colors.error }]}>
-                ${(overview.currentBalance || 0).toLocaleString()}
-              </Text>
+              <Text style={[styles.overviewLabel, { color: colors.icon }]}>{t('financial.total_expenses')}</Text>
+              <Text style={[styles.overviewValue, { color: colors.error }]}>{formatIDR(overview.totalExpenses || 0)}</Text>
             </View>
           </View>
 
           {/* Transactions */}
           <View style={styles.transHeaderRow}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Transactions</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('financial.recent_transactions')}</Text>
             <TouchableOpacity activeOpacity={0.8} style={[styles.addBtn, { backgroundColor: colors.primary }, shadow]}
               onPress={() => {
                 const { router } = require('expo-router');
                 router.push('/finance/form');
               }}>
               <Ionicons name="add" size={16} color="#fff" />
-              <Text style={styles.addBtnText}>Add Transaction</Text>
+              <Text style={styles.addBtnText}>{t('financial.add_transaction')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Date Range Filter */}
           <View style={styles.filterRow}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.filterBtn, { backgroundColor: filterDate ? colors.primary : colors.secondary }]}
               onPress={() => setShowDatePicker(true)}
             >
               <Ionicons name="calendar-outline" size={16} color={filterDate ? '#fff' : colors.text} />
               <Text style={[styles.filterBtnText, { color: filterDate ? '#fff' : colors.text }]}>
-                {filterDate ? filterDate.toLocaleDateString() : 'From Date'}
+                {filterDate ? filterDate.toLocaleDateString() : t('financial.from_date')}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.filterBtn, { backgroundColor: filterEndDate ? colors.primary : colors.secondary }]}
               onPress={() => setShowEndDatePicker(true)}
             >
               <Ionicons name="calendar-outline" size={16} color={filterEndDate ? '#fff' : colors.text} />
               <Text style={[styles.filterBtnText, { color: filterEndDate ? '#fff' : colors.text }]}>
-                {filterEndDate ? filterEndDate.toLocaleDateString() : 'To Date'}
+                {filterEndDate ? filterEndDate.toLocaleDateString() : t('financial.to_date')}
               </Text>
             </TouchableOpacity>
             {(filterDate || filterEndDate) && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.filterBtn, { backgroundColor: colors.error }]}
                 onPress={() => {
                   setFilterDate(null);
@@ -162,7 +165,7 @@ export default function FinancialScreen() {
                 }}
               >
                 <Ionicons name="close" size={16} color="#fff" />
-                <Text style={[styles.filterBtnText, { color: '#fff' }]}>Clear</Text>
+                <Text style={[styles.filterBtnText, { color: '#fff' }]}>{t('financial.clear')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -178,7 +181,7 @@ export default function FinancialScreen() {
               }}
             />
           )}
-          
+
           {showEndDatePicker && (
             <DateTimePicker
               value={filterEndDate || new Date()}
@@ -203,13 +206,13 @@ export default function FinancialScreen() {
               <View style={styles.txLeft}>
                 <Ionicons name="receipt-outline" size={20} color={colors.icon} />
                 <View style={{ marginLeft: 10 }}>
-                  <Text style={[styles.txTitle, { color: colors.text }]}>{tx.notes || 'Transaction'}</Text>
+                  <Text style={[styles.txTitle, { color: colors.text }]}>{tx.notes || t('financial.transaction')}</Text>
                   <Text style={[styles.txSubtitle, { color: colors.icon }]}>{tx.transaction_date || ''}</Text>
                 </View>
               </View>
               <View style={styles.txRight}>
                 <Text style={{ color: (tx.debit || 0) > 0 ? colors.success : colors.error, fontWeight: Typography.weight.bold }}>
-                  {(tx.debit || 0) > 0 ? `+$${tx.debit.toLocaleString()}` : `-$${(tx.credit || 0).toLocaleString()}`}
+                  {(tx.debit || 0) > 0 ? formatIDRSigned(tx.debit || 0, true) : formatIDRSigned(tx.credit || 0, false)}
                 </Text>
                 <TouchableOpacity onPress={() => {
                   const { router } = require('expo-router');

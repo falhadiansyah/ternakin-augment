@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useAuthContext } from './AuthProvider';
 import { useLanguage } from './LanguageProvider';
 import { useTheme } from './ThemeProvider';
 
@@ -13,17 +12,12 @@ interface BurgerMenuProps {
 }
 
 export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
-  const { signOut } = useAuthContext();
+  // const { signOut } = useAuthContext();
   const { theme, setTheme, isDark } = useTheme();
   const { language, setLanguage, t } = useLanguage();
   const colors = Colors[isDark ? 'dark' : 'light'];
 
-  const handleLogout = () => {
-    onClose();
-    signOut().then(() => {
-      router.replace('/auth/login');
-    });
-  };
+  // Logout handled in Profile screen now
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
     setTheme(newTheme);
@@ -52,6 +46,15 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
 
   const menuItems: MenuItem[] = [
     {
+      id: 'profile',
+      title: t('nav.profile'),
+      icon: 'person',
+      onPress: () => {
+        onClose();
+        router.push('/profile');
+      },
+    },
+    {
       id: 'theme',
       title: t('settings.theme'),
       icon: isDark ? 'moon' : 'sunny',
@@ -70,22 +73,14 @@ export function BurgerMenu({ visible, onClose }: BurgerMenuProps) {
       onPress: () => handleLanguageChange(language === 'en' ? 'id' : 'en'),
       subtitle: language === 'en' ? t('settings.english') : t('settings.indonesian'),
     },
-    {
-      id: 'profile',
-      title: t('nav.profile'),
-      icon: 'person',
-      onPress: () => {
-        onClose();
-        router.push('/profile');
-      },
-    },
-    {
-      id: 'logout',
-      title: t('auth.logout'),
-      icon: 'log-out',
-      onPress: handleLogout,
-      danger: true,
-    },
+    // Logout moved to Profile screen
+    // {
+    //   id: 'logout',
+    //   title: t('auth.logout'),
+    //   icon: 'log-out',
+    //   onPress: handleLogout,
+    //   danger: true,
+    // },
   ];
 
   const slideX = useRef(new Animated.Value(-300)).current;

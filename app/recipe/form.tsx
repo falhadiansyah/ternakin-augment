@@ -4,6 +4,7 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { createRecipe, getRecipeById, getRecipeItems, replaceRecipeItems, updateRecipe } from '@/lib/data';
+import { formatIDR } from '@/utils/currency';
 import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -123,9 +124,9 @@ export default function RecipeFormScreen() {
           <View style={[styles.card, { borderColor: colors.border }]}>
             <Text style={{ color: colors.text, fontWeight: Typography.weight.bold, marginBottom: 4 }}>Summary</Text>
             {isEdit && dbTotalPriceKg != null && (
-              <Text style={{ color: colors.icon, marginBottom: 2 }}>Saved price: ${Number(dbTotalPriceKg).toLocaleString()} / kg</Text>
+              <Text style={{ color: colors.icon, marginBottom: 2 }}>Saved price: {`${formatIDR(Number(dbTotalPriceKg))} / kg`}</Text>
             )}
-            <Text style={{ color: colors.icon }}>Estimated price: {liveTotalPriceKg != null ? `$${Number(liveTotalPriceKg).toLocaleString()} / kg` : '-'}</Text>
+            <Text style={{ color: colors.icon }}>Estimated price: {liveTotalPriceKg != null ? `${formatIDR(Number(liveTotalPriceKg))} / kg` : '-'}</Text>
           </View>
 
           <LabeledInput label="Type" error={errors.type}>

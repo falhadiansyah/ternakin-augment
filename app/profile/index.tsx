@@ -135,6 +135,14 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </TouchableOpacity>
+
+            <View style={{ alignItems: 'flex-end', marginTop: 16 }}>
+              <TouchableOpacity onPress={handleLogout} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
+                <Ionicons name="log-out" size={16} color={colors.text} />
+                <Text style={{ color: colors.text }}>{t('auth.logout')}</Text>
+              </TouchableOpacity>
+            </View>
+
         </View>
       </ScrollView>
     </SafeAreaView>

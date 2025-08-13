@@ -6,7 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
@@ -31,7 +31,7 @@ export default function LoginScreen() {
       console.log('Starting Google login...');
       const result = await signInWithGoogle();
       console.log('Google login result:', result);
-      
+
       if (result.data && !result.error) {
         console.log('Google login successful, redirecting...');
         router.replace('/(tabs)/dashboard');
@@ -112,20 +112,19 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="close" size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
 
       <KeyboardAvoidingView
         style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.logoContainer}>
+          {/* Ternakin logo image */}
+          {/* Replace the placeholder with actual optimized file: assets/images/ternakin-logo.png */}
+          <Image
+            source={require('@/assets/images/ternakin-logo.png')}
+            style={{ width: 96, height: 96, borderRadius: 20, marginBottom: 0 }}
+            resizeMode="contain"
+          />
           <Text style={[styles.logo, { color: colors.primary }]}>
             {t('app.name')}
           </Text>

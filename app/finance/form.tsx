@@ -26,7 +26,7 @@ export default function FinanceFormScreen() {
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState<Date>(new Date());
   const [showDate, setShowDate] = useState(false);
-  const [type, setType] = useState<'income' | 'expense'>('income');
+  const [type, setType] = useState<'income' | 'expenses'>('income');
   const [notes, setNotes] = useState('');
   const [batches, setBatches] = useState<BatchRow[]>([]);
   const [batchId, setBatchId] = useState<string | null>(null);
@@ -97,18 +97,18 @@ export default function FinanceFormScreen() {
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','bottom']}> 
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','bottom']}>
         <Header title={isEdit ? 'Edit Transaction' : 'Add Transaction'} showBackButton onBackPress={() => router.back()} />
         <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl + insets.bottom }}>
           <LabeledInput label="Type">
             <View style={{ flexDirection:'row', gap: 8 }}>
               <Chip label="Income" selected={!isCredit} onPress={() => setIsCredit(false)} />
-              <Chip label="Expense" selected={isCredit} onPress={() => setIsCredit(true)} />
+              <Chip label="Expenses" selected={isCredit} onPress={() => setIsCredit(true)} />
             </View>
           </LabeledInput>
 
           <LabeledInput label="Amount" error={errors.amount}>
-            <TextInput value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="0.00" placeholderTextColor={colors.icon}
+            <TextInput value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.icon}
               style={[styles.input, { borderColor: colors.border, color: colors.text }]} />
           </LabeledInput>
 

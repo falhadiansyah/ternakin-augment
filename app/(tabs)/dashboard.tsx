@@ -6,6 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { getBalance, listBatches, listTransactions } from '@/lib/data';
+import { formatIDR } from '@/utils/currency';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -30,13 +31,13 @@ export default function DashboardScreen() {
   const [chartData, setChartData] = useState({
     labels: [] as string[],
     datasets: [
-      { 
-        data: [] as number[], 
+      {
+        data: [] as number[],
         color: (opacity: number) => `rgba(34, 197, 94, ${opacity})`, // Green for income
         strokeWidth: 2
       },
-      { 
-        data: [] as number[], 
+      {
+        data: [] as number[],
         color: (opacity: number) => `rgba(239, 68, 68, ${opacity})`, // Red for expenses
         strokeWidth: 2
       },
@@ -141,7 +142,7 @@ export default function DashboardScreen() {
             chartLabels.push(week);
             const weekStart = new Date(currentRange.start.getFullYear(), currentRange.start.getMonth(), index * 7);
             const weekEnd = new Date(currentRange.start.getFullYear(), currentRange.start.getMonth(), (index + 1) * 7);
-            
+
             const weekIncome = currentTransactions
               .filter(tx => {
                 if (!tx.transaction_date) return false;
@@ -149,7 +150,7 @@ export default function DashboardScreen() {
                 return txDate >= weekStart && txDate < weekEnd;
               })
               .reduce((sum, tx) => sum + (tx.debit || 0), 0);
-            
+
             const weekExpense = currentTransactions
               .filter(tx => {
                 if (!tx.transaction_date) return false;
@@ -157,7 +158,7 @@ export default function DashboardScreen() {
                 return txDate >= weekStart && txDate < weekEnd;
               })
               .reduce((sum, tx) => sum + (tx.credit || 0), 0);
-            
+
             incomeData.push(weekIncome);
             expenseData.push(weekExpense);
           });
@@ -173,7 +174,7 @@ export default function DashboardScreen() {
                 return txDate.getMonth() === index && txDate.getFullYear() === currentRange.start.getFullYear();
               })
               .reduce((sum, tx) => sum + (tx.debit || 0), 0);
-            
+
             const monthExpense = currentTransactions
               .filter(tx => {
                 if (!tx.transaction_date) return false;
@@ -181,7 +182,7 @@ export default function DashboardScreen() {
                 return txDate.getMonth() === index && txDate.getFullYear() === currentRange.start.getFullYear();
               })
               .reduce((sum, tx) => sum + (tx.credit || 0), 0);
-            
+
             incomeData.push(monthIncome);
             expenseData.push(monthExpense);
           });
@@ -195,13 +196,13 @@ export default function DashboardScreen() {
         setChartData({
           labels: chartLabels,
           datasets: [
-            { 
-              data: incomeData, 
+            {
+              data: incomeData,
               color: (opacity: number) => `rgba(34, 197, 94, ${opacity})`,
               strokeWidth: 2
             },
-            { 
-              data: expenseData, 
+            {
+              data: expenseData,
               color: (opacity: number) => `rgba(239, 68, 68, ${opacity})`,
               strokeWidth: 2
             },
@@ -234,8 +235,8 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title={t('nav.dashboard')} />
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={{ paddingBottom: Spacing.xl }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
@@ -290,7 +291,7 @@ export default function DashboardScreen() {
             />
             <StatCard
               title="Total Income"
-              value={`$${metrics.totalIncome.value.toLocaleString()}`}
+              value={formatIDR(metrics.totalIncome.value)}
               delta={metrics.totalIncome.delta}
               icon="trending-up"
               colors={colors}
@@ -298,7 +299,7 @@ export default function DashboardScreen() {
             />
             <StatCard
               title="Total Expenses"
-              value={`$${metrics.totalExpenses.value.toLocaleString()}`}
+              value={formatIDR(metrics.totalExpenses.value)}
               delta={metrics.totalExpenses.delta}
               icon="trending-down"
               colors={colors}
@@ -306,7 +307,7 @@ export default function DashboardScreen() {
             />
             <StatCard
               title="Net Profit"
-              value={`$${metrics.netProfit.value.toLocaleString()}`}
+              value={formatIDR(metrics.netProfit.value)}
               delta={metrics.netProfit.delta}
               icon="wallet"
               colors={colors}

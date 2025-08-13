@@ -158,12 +158,12 @@ export default function LivestockScreen() {
         const transactionDate = historyData?.[0]?.created_at || new Date().toISOString();
 
         // Create financial transaction for stock adjustments
-        let transactionType: 'income' | 'expense';
+        let transactionType: 'income' | 'expenses';
         let amount: number;
 
         if (stockModal.isIncrease) {
           // Purchasing = expense
-          transactionType = 'expense';
+          transactionType = 'expenses';
           amount = price;
         } else {
           // Selling or death
@@ -171,16 +171,16 @@ export default function LivestockScreen() {
             transactionType = 'income';
             amount = price;
           } else {
-            transactionType = 'expense';
+            transactionType = 'expenses';
             amount = price;
           }
         }
 
         const { error: transactionError } = await createTransaction({
           debit: transactionType === 'income' ? amount : 0,
-          credit: transactionType === 'expense' ? amount : 0,
+          credit: transactionType === 'expenses' ? amount : 0,
           transaction_date: transactionDate,
-          type: adjustmentType,
+          type: transactionType,
           notes: `${adjustmentType} - ${count} ${stockModal.batch.animal} from ${stockModal.batch.name}`,
           batches_id: stockModal.batch.id,
         });
@@ -292,7 +292,7 @@ export default function LivestockScreen() {
                 <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
                   <Ionicons name="people" size={14} color={colors.icon} />
                   <Text style={[styles.metricTileValue, { color: colors.text }]}>{b.current_count || 0}</Text>
-                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>Total</Text>
+                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>{t('livestock.total') || 'Total'}</Text>
                 </View>
 
                 <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
@@ -300,7 +300,7 @@ export default function LivestockScreen() {
                   <Text style={[styles.metricTileValue, { color: colors.text }]}>
                     {b.current_age_days || 0}
                   </Text>
-                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>Days ({b.current_age_days || 0} Weeks)</Text>
+                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>{t('livestock.days_weeks', { days: b.current_age_days || 0 })}</Text>
                 </View>
 
                 <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
@@ -308,7 +308,7 @@ export default function LivestockScreen() {
                   <Text style={[styles.metricTileValue, { color: colors.text }]}>
                     {growthByBatch[b.id]?.temperature ? `${growthByBatch[b.id].temperature}°C` : '-'}
                   </Text>
-                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>Temp</Text>
+                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>{t('livestock.temperature')}</Text>
                 </View>
 
                 <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
@@ -316,7 +316,7 @@ export default function LivestockScreen() {
                   <Text style={[styles.metricTileValue, { color: colors.text }]}>
                     {growthByBatch[b.id]?.lighting || '-'}
                   </Text>
-                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>Lighting</Text>
+                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>{t('livestock.lighting')}</Text>
                 </View>
               </View>
 
@@ -561,7 +561,13 @@ const styles = StyleSheet.create({
     borderRadius: Radii.sm,
     padding: Spacing.sm,
     alignItems: 'center',
-    gap: Spacing.xs as any
+    gap: Spacing.xs as any,
+    minHeight: 72,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
   },
   metricTileValue: {
     fontSize: Typography.body,

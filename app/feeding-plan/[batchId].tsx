@@ -5,6 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { createFeedingPlan, deleteFeedingPlan, getRecipeItems, listBatches, listFeedingPlan, listRecipes, updateFeedingPlan, type BatchRow, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
+import { formatIDR } from '@/utils/currency';
 import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -238,7 +239,7 @@ export default function FeedingPlanScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Feeding Plans" showBackButton onBackPress={() => router.back()} />
+        <Header title={t('feeding.plans_title') || 'Feeding Plans'} showBackButton onBackPress={() => router.back()} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -248,7 +249,7 @@ export default function FeedingPlanScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Feeding Plans" showBackButton onBackPress={() => router.back()} />
+      <Header title={t('feeding.plans_title') || 'Feeding Plans'} showBackButton onBackPress={() => router.back()} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={{ paddingBottom: Spacing.xl + insets.bottom }}
@@ -276,23 +277,10 @@ export default function FeedingPlanScreen() {
                   <Text style={[styles.planTitle, { color: colors.text }]}>
                     {getBatchName(plan.batches_id)}
                   </Text>
-                  <View style={styles.planActions}>
-                    <TouchableOpacity
-                      style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                      onPress={() => openEditModal(plan)}
-                    >
-                      <Ionicons name="create-outline" size={16} color="#fff" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.actionButton, { backgroundColor: '#ef4444' }]}
-                      onPress={() => deletePlan(plan)}
-                    >
-                      <Ionicons name="trash-outline" size={16} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
+                  {/* Actions moved to bottom-right of card */}
                 </View>
 
-                <View style={styles.planDetails}>
+                <View style={[styles.planDetails, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: Spacing.sm }]}>
                   <View style={styles.detailRow}>
                     <Text style={[styles.detailLabel, { color: colors.icon }]}>Recipe:</Text>
                     <Text style={[styles.detailValue, { color: colors.text }]}>
@@ -318,7 +306,7 @@ export default function FeedingPlanScreen() {
 	                        {rec.total_price_kg != null && (
 	                          <View style={styles.detailRow}>
 	                            <Text style={[styles.detailLabel, { color: colors.icon }]}>Price/kg:</Text>
-	                            <Text style={[styles.detailValue, { color: colors.text }]}>${Number(rec.total_price_kg).toLocaleString()}</Text>
+	                            <Text style={[styles.detailValue, { color: colors.text }]}>{formatIDR(Number(rec.total_price_kg))}</Text>
 	                          </View>
 	                        )}
 	                        {rec.description ? (
@@ -333,24 +321,34 @@ export default function FeedingPlanScreen() {
                 {/* Recipe ingredients preview */}
                 {plan.recipes_id && recipeItems[plan.recipes_id] && (
                   <View style={styles.ingredientsPreview}>
-                    <Text style={[styles.ingredientsTitle, { color: colors.icon }]}>Ingredients:</Text>
+                    <Text style={[styles.ingredientsTitle, { color: colors.icon }]}>Ingredients</Text>
                     {(recipeItems[plan.recipes_id] || []).slice(0, 3).map((item, idx) => (
-                      <View key={idx} style={styles.ingredientItem}>
-                        <Text style={[styles.ingredientName, { color: colors.text }]} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                        <Text style={[styles.ingredientPercent, { color: colors.icon }]}>
-                          {item.percentages}%
-                        </Text>
+                      <View key={idx} style={{ marginBottom: 6 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
+                          <Text style={[styles.ingredientName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
+                          <Text style={[styles.ingredientPercent, { color: colors.icon }]}>{item.percentages}%</Text>
+                        </View>
+                        <View style={{ height: 6, backgroundColor: colors.secondary, borderRadius: 3, overflow: 'hidden' }}>
+                          <View style={{ width: `${Math.min(100, Math.max(0, item.percentages))}%`, height: '100%', backgroundColor: colors.primary }} />
+                        </View>
                       </View>
                     ))}
                     {(recipeItems[plan.recipes_id] || []).length > 3 && (
-                      <Text style={[styles.moreIngredients, { color: colors.icon }]}>
-                        +{(recipeItems[plan.recipes_id] || []).length - 3} more ingredients
-                      </Text>
+                      <Text style={[styles.moreIngredients, { color: colors.icon }]}>+{(recipeItems[plan.recipes_id] || []).length - 3} more ingredients</Text>
                     )}
                   </View>
                 )}
+
+                {/* Bottom-right actions */}
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: Spacing.sm }}>
+                  <TouchableOpacity style={{ padding: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border }} onPress={() => openEditModal(plan)}>
+                    <Ionicons name="create-outline" size={16} color={colors.text} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ padding: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border }} onPress={() => deletePlan(plan)}>
+                    <Ionicons name="trash-outline" size={16} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+
               </View>
             ))
           )}
@@ -359,7 +357,7 @@ export default function FeedingPlanScreen() {
 
       {/* Add Button */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.primary }]}
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: Spacing.xl + insets.bottom }]}
         onPress={openAddModal}
       >
         <Ionicons name="add" size={24} color="#fff" />

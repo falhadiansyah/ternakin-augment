@@ -6,6 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { createFeedingPlan, deleteRecipe, getGrowthRowWithFallback, getRecipeItems, listBatches, listFeedingPlan, listRecipes, recomputeAndUpdateBatchAges, type BatchRow, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
+import { formatIDR } from '@/utils/currency';
 import { showToast } from '@/utils/toast';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -126,14 +127,14 @@ export default function FeedingScreen() {
           )}
           {error && <Text style={{ color: colors.error, marginBottom: Spacing.sm }}>Failed to load: {error}</Text>}
         {range === 'recipes' && (
-          <View style={{ alignItems: 'flex-end', paddingHorizontal: Spacing.md, marginTop: Spacing.sm }}>
-            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}
+          <View style={[styles.toolbar, { padding: 0, marginBottom: 10 }]}>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}
               onPress={() => {
                 const { router } = require('expo-router');
                 router.push('/recipe/form');
               }}>
               <Ionicons name="add" color="#fff" size={16} />
-              <Text style={styles.addBtnText}>Add Recipe</Text>
+              <Text style={styles.addBtnText}>{t('recipe.add_recipe') || 'Add Recipe'}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -153,19 +154,18 @@ export default function FeedingScreen() {
                     <Text style={[styles.itemTitle, { color: colors.text }]}>{b.name}</Text>
                     <View style={styles.itemMetaRow}>
                       <Ionicons name="calendar-outline" size={14} color={colors.icon} />
-                      <Text style={[styles.itemMeta, { color: colors.icon }]}>Age: {b.current_age_weeks} w</Text>
+                      <Text style={[styles.itemMeta, { color: colors.icon }]}>{t('livestock.age_weeks', { weeks: b.current_age_weeks || 0 })}</Text>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Feed total</Text>
+                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>{t('feeding.feed_total') || 'Feed total'}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                           <Text style={[styles.itemTitle, { color: colors.text }]}>{isFinite(totalFeedKg) ? `${totalFeedKg.toFixed(2)} kg` : '-'}</Text>
-                          <Ionicons name="chevron-up" size={16} color={colors.icon} />
                         </View>
                         {per.feed_gr != null && <Text style={[styles.cardSubtitle, { color: colors.icon }]}>{per.feed_gr} g/animal × {count}</Text>}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Water total</Text>
+                        <Text style={[styles.cardSubtitle, { color: colors.icon }]}>{t('feeding.water_total') || 'Water total'}</Text>
                         <Text style={[styles.itemTitle, { color: colors.text }]}>{isFinite(totalWaterL) ? `${totalWaterL.toFixed(2)} L` : '-'}</Text>
                         {per.water_ml != null && <Text style={[styles.cardSubtitle, { color: colors.icon }]}>{per.water_ml} ml/animal × {count}</Text>}
                       </View>
@@ -204,12 +204,12 @@ export default function FeedingScreen() {
                           return plansForBatch.filter(p => isInRange(p)).map((p) => (
                             <View key={p.id} style={{ marginBottom: 12 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Plan: {p.age_from_week ?? 0}-{p.age_to_week ?? 0} w</Text>
+                                <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Plan: {p.age_from_week ?? 0} - {p.age_to_week ?? 0} w</Text>
                               </View>
                               {(() => {
                                 const recipe = (recipes || []).find(rr => rr.id === p.recipes_id);
                                 return (
-                                  <Text style={[styles.cardSubtitle, { color: colors.icon, marginTop: 2 }]}>Recipe: {recipe?.name || '-'} {recipe?.total_price_kg != null ? `• $${Number(recipe.total_price_kg).toLocaleString()} / kg` : ''}</Text>
+                                  <Text style={[styles.cardSubtitle, { color: colors.icon, marginTop: 2 }]}>Recipe: {recipe?.name || '-'} {recipe?.total_price_kg != null ? `• ${formatIDR(Number(recipe.total_price_kg))} / kg` : ''}</Text>
                                 );
                               })()}
 
@@ -262,7 +262,7 @@ export default function FeedingScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
                       <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }]} onPress={() => setAssigningFor(null)}>
-                        <Text style={[styles.addBtnText, { color: colors.text }]}>Cancel</Text>
+                        <Text style={[styles.addBtnText, { color: colors.text }]}>{t('common.cancel')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.primary }]} onPress={async () => {
                         if (!assigningFor || !assignRecipeId) { Alert.alert('Validation', 'Please select a recipe'); return; }
@@ -307,12 +307,12 @@ export default function FeedingScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => {
                         Alert.alert(
-                          'Confirm Delete',
-                          `Are you sure you want to delete "${r.name}"? This action cannot be undone.`,
+                          t('common.validation'),
+                          t('feeding.confirm_delete'),
                           [
-                            { text: 'Cancel', style: 'cancel' },
+                            { text: t('common.cancel'), style: 'cancel' },
                             {
-                              text: 'Delete',
+                              text: t('common.delete'),
                               style: 'destructive',
                               onPress: async () => {
                                 await deleteRecipe(r.id);
@@ -329,7 +329,7 @@ export default function FeedingScreen() {
                   </View>
                   <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Type: {r.type} • Used: {r.used_for}</Text>
                   {r.total_price_kg != null && (
-                    <Text style={[styles.cardSubtitle, { color: colors.icon }]}>${r.total_price_kg.toLocaleString()} / kg</Text>
+                    <Text style={[styles.cardSubtitle, { color: colors.icon }]}>{`${formatIDR(r.total_price_kg)} / kg`}</Text>
                   )}
                   {/* Ingredients breakdown */}
                   <View style={{ marginTop: 6, width: '100%' }}>
@@ -377,6 +377,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  toolbar: { padding: Spacing.md, paddingBottom: 0 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radii.sm },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any, marginLeft: Spacing.xs, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radii.sm },
   addBtnText: { color: '#fff', fontWeight: Typography.weight.bold },
   smallBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any, paddingVertical: 6, paddingHorizontal: Spacing.sm, borderRadius: Radii.sm },
