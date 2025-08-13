@@ -315,11 +315,46 @@ export async function replaceRecipeItems(parentId: string, items: Array<{ name: 
   // delete existing
   const { error: de } = await supabase.from('recipes_items').delete().eq('parent_id', parentId);
   if (de) return { error: de };
-  if (!items || items.length === 0) return { error: null };
+  if (!items || items.length === 0) {
+    // When no items, clear total_price_kg
+    const { error: ue } = await supabase.from('recipes').update({ total_price_kg: null }).eq('id', parentId);
+    return { error: ue || null } as { error: any | null };
+  }
   const { error } = await supabase.from('recipes_items').insert(
     items.map(i => ({ parent_id: parentId, name: i.name, percentages: i.percentages, price_kg: i.price_kg }))
   );
-  return { error };
+  if (error) return { error };
+  // Recompute and persist total_price_kg after items are replaced
+  const { error: re } = await recomputeRecipeTotalPriceKg(parentId);
+  return { error: re || null } as { error: any | null };
+}
+
+// Recompute total_price_kg for a recipe based on its items
+export async function recomputeRecipeTotalPriceKg(parentId: string): Promise<{ value: number | null; error: any | null }> {
+  const { data: items, error } = await supabase
+    .from('recipes_items')
+    .select('percentages, price_kg')
+    .eq('parent_id', parentId);
+  if (error) return { value: null, error };
+  const arr = items || [];
+  if (arr.length === 0) {
+    const { error: ue } = await supabase.from('recipes').update({ total_price_kg: null }).eq('id', parentId);
+    return { value: null, error: ue || null };
+  }
+  // Only compute when all items have valid numeric values
+  const allValid = arr.every((it) => isFinite(Number(it.percentages)) && isFinite(Number(it.price_kg)));
+  if (!allValid) {
+    const { error: ue } = await supabase.from('recipes').update({ total_price_kg: null }).eq('id', parentId);
+    return { value: null, error: ue || null };
+  }
+  const total = arr.reduce((sum, it: any) => {
+    const p = Number(it.percentages) || 0;
+    const price = Number(it.price_kg) || 0;
+    return sum + (p / 100) * price;
+  }, 0);
+  const value = Number(total.toFixed(4));
+  const { error: ue } = await supabase.from('recipes').update({ total_price_kg: value }).eq('id', parentId);
+  return { value, error: ue || null };
 }
 
 // Delete helpers

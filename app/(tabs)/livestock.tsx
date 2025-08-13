@@ -32,8 +32,8 @@ export default function LivestockScreen() {
   const [adjustmentDescription, setAdjustmentDescription] = useState('');
   const [adjustmentPrice, setAdjustmentPrice] = useState('');
   const [saving, setSaving] = useState(false);
-  const [growthByBatch, setGrowthByBatch] = useState<Record<string, { 
-    weight_male: number | null; 
+  const [growthByBatch, setGrowthByBatch] = useState<Record<string, {
+    weight_male: number | null;
     weight_female: number | null;
     temperature?: number | null;
     lighting?: string | null;
@@ -57,8 +57,8 @@ export default function LivestockScreen() {
   useEffect(() => {
     // After batches are loaded, fetch expected weights and care data per batch
     (async () => {
-      const map: Record<string, { 
-        weight_male: number | null; 
+      const map: Record<string, {
+        weight_male: number | null;
         weight_female: number | null;
         temperature?: number | null;
         lighting?: string | null;
@@ -67,8 +67,8 @@ export default function LivestockScreen() {
       }> = {};
       for (const b of (batches || [])) {
         const { data: g } = await getGrowthRowWithFallback(b.animal, b.breed, b.current_age_weeks || 0);
-        map[b.id] = { 
-          weight_male: g?.weight_male ?? null, 
+        map[b.id] = {
+          weight_male: g?.weight_male ?? null,
           weight_female: g?.weight_female ?? null,
           temperature: g?.temperature ?? null,
           lighting: g?.lightning ?? null,
@@ -199,24 +199,24 @@ export default function LivestockScreen() {
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toISOString().split('T')[0]; // YYYY-MM-DD format
   };
 
   const formatAge = (days: number, weeks: number) => {
-    return `${days}d / ${weeks}w`;
+    return `${days} days (${weeks} weeks)`;
   };
 
   const formatWeight = (male: number | null, female: number | null) => {
     if (male && female) {
-      return `${male} / ${female}`;
+      return `${male} (Male) ${female} (Female)`;
     } else if (male) {
-      return `${male}`;
+      return `${male} (Male)`;
     } else if (female) {
-      return `${female}`;
+      return `${female} (Female)`;
     }
-    return 'N/A';
+    return '-';
   };
 
   return (
@@ -254,10 +254,12 @@ export default function LivestockScreen() {
                   <Text style={[styles.itemSubtitle, { color: colors.icon }]}>{b.animal}</Text>
                 </View>
                 <View style={[styles.batchTag, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.batchTagText}>{b.breed}</Text>
+                  <Text style={styles.batchTagText}>
+                    {(b.breed || '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim()}
+                  </Text>
                 </View>
               </View>
-              
+
               {/* Entry details */}
               <View style={styles.entryDetails}>
                 <View style={styles.entryItem}>
@@ -269,27 +271,36 @@ export default function LivestockScreen() {
                 <View style={styles.entryItem}>
                   <Ionicons name="business" size={14} color={colors.icon} />
                   <Text style={[styles.entryText, { color: colors.icon }]}>
-                    Source: {b.source || 'N/A'}
+                    Source: {b.source || '-'}
                   </Text>
                 </View>
               </View>
-              
-              {/* Key metrics - 3 columns */}
+
+              {/* Key metrics - 3 columns with icons */}
               <View style={styles.keyMetrics}>
                 <View style={styles.metricColumn}>
-                  <Text style={[styles.metricValue, { color: colors.text }]}>
-                    {b.current_count || 0} Animals
-                  </Text>
+                  <View style={styles.metricWithIcon}>
+                    <Ionicons name="people" size={14} color={colors.icon} />
+                    <Text style={[styles.metricValue, { color: colors.text }]}>
+                      {(b.current_count || 0)}
+                    </Text>
+                  </View>
                 </View>
                 <View style={styles.metricColumn}>
-                  <Text style={[styles.metricValue, { color: colors.text }]}>
-                    {formatAge(b.current_age_days || 0, b.current_age_weeks || 0)} Age
-                  </Text>
+                  <View style={styles.metricWithIcon}>
+                    <Ionicons name="time" size={14} color={colors.icon} />
+                    <Text style={[styles.metricValue, { color: colors.text }]}>
+                      {formatAge(b.current_age_days || 0, b.current_age_weeks || 0)}
+                    </Text>
+                  </View>
                 </View>
                 <View style={styles.metricColumn}>
-                  <Text style={[styles.metricValue, { color: colors.text }]}>
-                    {formatWeight(growthByBatch[b.id]?.weight_male, growthByBatch[b.id]?.weight_female)} Weight M/F
-                  </Text>
+                  <View style={styles.metricWithIcon}>
+                    <Ionicons name="barbell" size={14} color={colors.icon} />
+                    <Text style={[styles.metricValue, { color: colors.text }]}>
+                      {formatWeight(growthByBatch[b.id]?.weight_male, growthByBatch[b.id]?.weight_female)}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
@@ -299,7 +310,7 @@ export default function LivestockScreen() {
                   <View style={styles.metricWithIcon}>
                     <Ionicons name="thermometer" size={14} color={colors.icon} />
                     <Text style={[styles.metricText, { color: colors.icon }]}>
-                      {growthByBatch[b.id]?.temperature ? `${growthByBatch[b.id].temperature}°C` : 'N/A'}
+                      {growthByBatch[b.id]?.temperature ? `${growthByBatch[b.id].temperature}°C` : '-'}
                     </Text>
                   </View>
                 </View>
@@ -307,7 +318,7 @@ export default function LivestockScreen() {
                   <View style={styles.metricWithIcon}>
                     <Ionicons name="sunny" size={14} color={colors.icon} />
                     <Text style={[styles.metricText, { color: colors.icon }]}>
-                      {growthByBatch[b.id]?.lighting || 'N/A'}
+                      {growthByBatch[b.id]?.lighting || '-'}
                     </Text>
                   </View>
                 </View>
@@ -321,15 +332,15 @@ export default function LivestockScreen() {
                 </View>
               </View>
 
-              {/* Action buttons - positioned on the bottom-right */}
-              <View style={styles.actionButtons}>
-                <TouchableOpacity 
+              {/* Action buttons */}
+              <View style={[styles.actionButtons, { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: Spacing.sm }]}>
+                <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: colors.secondary }]}
                   onPress={() => handleStockAdjustment(b, true)}
                 >
                   <Ionicons name="add" size={16} color={colors.text} />
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: colors.secondary }]}
                   onPress={() => handleStockAdjustment(b, false)}
                 >
@@ -348,7 +359,7 @@ export default function LivestockScreen() {
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {stockModal?.isIncrease ? 'Add Stock' : 'Reduce Stock'} - {stockModal?.batch.name}
             </Text>
-            
+
             <View style={styles.modalField}>
               <Text style={[styles.modalLabel, { color: colors.icon }]}>Count/Qty</Text>
               <TextInput
@@ -442,97 +453,106 @@ const styles = StyleSheet.create({
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs as any, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: Radii.sm },
   actionBtnText: { color: '#fff', fontWeight: Typography.weight.bold },
   content: { padding: Spacing.md },
-  listItem: { 
-    borderWidth: 1, 
-    borderRadius: Radii.md, 
-    padding: Spacing.md, 
-    marginBottom: Spacing.sm,
-    position: 'relative',
-    paddingBottom: Spacing.xl * 2 // Extra space for action buttons
+  listItem: {
+    borderWidth: 1,
+    borderRadius: Radii.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md
   },
-  itemHeader: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-start', 
-    marginBottom: Spacing.sm 
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.sm
   },
   titleSection: {
     flex: 1,
   },
-  itemTitle: { 
-    fontSize: Typography.title, 
-    fontWeight: Typography.weight.bold,
+  itemTitle: {
+    fontSize: Typography.title,
+    fontWeight: Typography.weight.medium,
     marginBottom: 2
   },
-  itemSubtitle: { 
+  itemSubtitle: {
     fontSize: Typography.caption,
     textTransform: 'capitalize'
   },
-  batchTag: { 
-    paddingHorizontal: Spacing.sm, 
-    paddingVertical: Spacing.xs, 
+  batchTag: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
     borderRadius: Radii.pill,
     minWidth: 60,
-    alignItems: 'center'
+    alignItems: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
   },
-  batchTagText: { 
-    color: '#fff', 
-    fontSize: Typography.caption, 
-    fontWeight: Typography.weight.medium 
-  },
-  entryDetails: { 
-    flexDirection: 'row', 
-    gap: Spacing.md as any, 
-    marginBottom: Spacing.md 
-  },
-  entryItem: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: Spacing.xs as any 
-  },
-  entryText: { 
-    fontSize: Typography.caption 
-  },
-  keyMetrics: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    marginBottom: Spacing.sm 
-  },
-  additionalMetrics: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between' 
-  },
-  metricColumn: { 
-    flex: 1, 
-    alignItems: 'center' 
-  },
-  metricValue: { 
-    fontSize: Typography.body, 
-    fontWeight: Typography.weight.bold,
+  batchTagText: {
+    color: '#fff',
+    fontSize: Typography.caption,
+    fontWeight: Typography.weight.medium,
     textAlign: 'center'
   },
-  metricWithIcon: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: Spacing.xs as any 
+  entryDetails: {
+    flexDirection: 'row',
+    gap: Spacing.md as any,
+    marginBottom: Spacing.md
   },
-  metricText: { 
+  entryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs as any
+  },
+  entryText: {
+    fontSize: Typography.caption
+  },
+  keyMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm
+  },
+  additionalMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  metricColumn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xs
+  },
+  metricValue: {
+    fontSize: Typography.body,
+    fontWeight: Typography.weight.medium,
+    textAlign: 'center'
+  },
+  metricWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs as any
+  },
+  metricText: {
     fontSize: Typography.caption,
     textAlign: 'center'
   },
-  actionButtons: { 
-    position: 'absolute', 
-    right: Spacing.md, 
-    bottom: Spacing.md,
+  actionButtons: {
     flexDirection: 'row',
-    gap: Spacing.xs as any
+    justifyContent: 'flex-end',
+    gap: Spacing.sm as any,
+    marginTop: Spacing.md
   },
-  actionButton: { 
-    width: 32, 
-    height: 32, 
-    borderRadius: Radii.sm, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  actionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: Radii.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   modalOverlay: {
     flex: 1,

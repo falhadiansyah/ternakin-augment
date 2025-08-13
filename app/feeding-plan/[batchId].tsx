@@ -39,7 +39,7 @@ export default function FeedingPlanScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -58,14 +58,14 @@ export default function FeedingPlanScreen() {
         listRecipes(),
         listBatches(),
       ]);
-      
+
       if (pe) throw pe;
       if (re) throw re;
       if (be) throw be;
 
       // Filter plans by batchId if provided
       const filteredPlans = batchId ? (p || []).filter(plan => plan.batches_id === batchId) : (p || []);
-      
+
       setPlans(filteredPlans);
       setRecipes(r || []);
       setBatches(b || []);
@@ -145,15 +145,15 @@ export default function FeedingPlanScreen() {
     }
 
     // Check for overlapping age ranges with existing plans for the same batch
-    const existingPlans = plans.filter(plan => 
-      plan.batches_id === formData.batches_id && 
+    const existingPlans = plans.filter(plan =>
+      plan.batches_id === formData.batches_id &&
       (showEditModal ? plan.id !== editingPlan?.id : true)
     );
 
     for (const existingPlan of existingPlans) {
       const existingFrom = existingPlan.age_from_week || 0;
       const existingTo = existingPlan.age_to_week || 0;
-      
+
       // Check if the new range overlaps with existing range
       // Overlap occurs when: new_from <= existing_to AND new_to >= existing_from
       if (formData.age_from_week <= existingTo && formData.age_to_week >= existingFrom) {
@@ -170,7 +170,7 @@ export default function FeedingPlanScreen() {
 
     try {
       setSaving(true);
-      
+
       if (showEditModal && editingPlan) {
         // Update existing plan
         const { error } = await updateFeedingPlan(editingPlan.id, {
@@ -178,7 +178,7 @@ export default function FeedingPlanScreen() {
           age_from_week: formData.age_from_week,
           age_to_week: formData.age_to_week,
         });
-        
+
         if (error) throw error;
         showToast('Feeding plan updated successfully', 'success');
       } else {
@@ -189,7 +189,7 @@ export default function FeedingPlanScreen() {
           age_from_week: formData.age_from_week,
           age_to_week: formData.age_to_week,
         });
-        
+
         if (error) throw error;
         showToast('Feeding plan created successfully', 'success');
       }
@@ -249,8 +249,8 @@ export default function FeedingPlanScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title="Feeding Plans" showBackButton onBackPress={() => router.back()} />
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={{ paddingBottom: Spacing.xl + insets.bottom }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
@@ -277,13 +277,13 @@ export default function FeedingPlanScreen() {
                     {getBatchName(plan.batches_id)}
                   </Text>
                   <View style={styles.planActions}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={[styles.actionButton, { backgroundColor: colors.primary }]}
                       onPress={() => openEditModal(plan)}
                     >
                       <Ionicons name="create-outline" size={16} color="#fff" />
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={[styles.actionButton, { backgroundColor: '#ef4444' }]}
                       onPress={() => deletePlan(plan)}
                     >
@@ -305,6 +305,29 @@ export default function FeedingPlanScreen() {
                       Week {plan.age_from_week || 0} - Week {plan.age_to_week || 0}
                     </Text>
                   </View>
+
+	                  {(() => {
+	                    const rec = (recipes || []).find(r => r.id === plan.recipes_id);
+	                    if (!rec) return null;
+	                    return (
+	                      <>
+	                        <View style={styles.detailRow}>
+	                          <Text style={[styles.detailLabel, { color: colors.icon }]}>Type/Used:</Text>
+	                          <Text style={[styles.detailValue, { color: colors.text }]}>{rec.type} • {rec.used_for}</Text>
+	                        </View>
+	                        {rec.total_price_kg != null && (
+	                          <View style={styles.detailRow}>
+	                            <Text style={[styles.detailLabel, { color: colors.icon }]}>Price/kg:</Text>
+	                            <Text style={[styles.detailValue, { color: colors.text }]}>${Number(rec.total_price_kg).toLocaleString()}</Text>
+	                          </View>
+	                        )}
+	                        {rec.description ? (
+	                          <Text style={[styles.detailLabel, { color: colors.icon, marginTop: 2 }]} numberOfLines={2}>{rec.description}</Text>
+	                        ) : null}
+	                      </>
+	                    );
+	                  })()}
+
                 </View>
 
                 {/* Recipe ingredients preview */}
@@ -335,7 +358,7 @@ export default function FeedingPlanScreen() {
       </ScrollView>
 
       {/* Add Button */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.primary }]}
         onPress={openAddModal}
       >
@@ -349,7 +372,7 @@ export default function FeedingPlanScreen() {
             <Text style={[styles.modalTitle, { color: colors.text }]}>
               {showEditModal ? 'Edit Feeding Plan' : 'Add Feeding Plan'}
             </Text>
-            
+
             <View style={styles.formField}>
               <Text style={[styles.fieldLabel, { color: colors.icon }]}>Batch</Text>
               <View style={[styles.pickerContainer, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
@@ -402,7 +425,7 @@ export default function FeedingPlanScreen() {
                   placeholder="0"
                 />
               </View>
-              
+
               <View style={styles.formField}>
                 <Text style={[styles.fieldLabel, { color: colors.icon }]}>To Week</Text>
                 <TextInput

@@ -30,6 +30,16 @@ export default function RecipeFormScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string,string>>({});
 
+
+  const [dbTotalPriceKg, setDbTotalPriceKg] = useState<number | null>(null);
+  const liveTotalPriceKg = useMemo(() => {
+    if (!items || items.length === 0) return null;
+    const allValid = items.every(it => isFinite(Number(it.percentages)) && isFinite(Number(it.price_kg)));
+    if (!allValid) return null;
+    const total = items.reduce((sum, it) => sum + ((Number(it.percentages) || 0) / 100) * (Number(it.price_kg) || 0), 0);
+    return Number(total.toFixed(4));
+  }, [items]);
+
   useEffect(() => {
     (async () => {
       if (!isEdit) return;
@@ -40,6 +50,7 @@ export default function RecipeFormScreen() {
         setType((data.type as any) || 'custom_mix');
         setUsed((data.used_for as any) || 'grower');
         setDescription(data.description ?? '');
+        setDbTotalPriceKg(data.total_price_kg ?? null);
         const { data: itemRows } = await getRecipeItems(id!);
         setItems((itemRows || []).map(r => ({ name: r.name, percentages: String(r.percentages ?? ''), price_kg: String(r.price_kg ?? '') })));
       }
@@ -99,13 +110,23 @@ export default function RecipeFormScreen() {
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','bottom']}> 
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top','bottom']}>
         <Header title={isEdit ? 'Edit Recipe' : 'Add Recipe'} showBackButton onBackPress={() => router.back()} />
         <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: Spacing.xl + insets.bottom }}>
           <LabeledInput label="Name" error={errors.name}>
             <TextInput value={name} onChangeText={setName} placeholder="Recipe name" placeholderTextColor={colors.icon}
               style={[styles.input, { borderColor: colors.border, color: colors.text }]} />
           </LabeledInput>
+
+
+          {/* Live summary for total price per kg */}
+          <View style={[styles.card, { borderColor: colors.border }]}>
+            <Text style={{ color: colors.text, fontWeight: Typography.weight.bold, marginBottom: 4 }}>Summary</Text>
+            {isEdit && dbTotalPriceKg != null && (
+              <Text style={{ color: colors.icon, marginBottom: 2 }}>Saved price: ${Number(dbTotalPriceKg).toLocaleString()} / kg</Text>
+            )}
+            <Text style={{ color: colors.icon }}>Estimated price: {liveTotalPriceKg != null ? `$${Number(liveTotalPriceKg).toLocaleString()} / kg` : '-'}</Text>
+          </View>
 
           <LabeledInput label="Type" error={errors.type}>
             <Picker value={type} options={types} onChange={setType} />

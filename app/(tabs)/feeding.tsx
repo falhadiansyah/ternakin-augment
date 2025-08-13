@@ -91,7 +91,7 @@ export default function FeedingScreen() {
   }, [load]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}> 
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <Header title={t('nav.feeding')} />
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl + insets.bottom }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
@@ -206,6 +206,13 @@ export default function FeedingScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <Text style={[styles.cardSubtitle, { color: colors.icon }]}>Plan: {p.age_from_week ?? 0}-{p.age_to_week ?? 0} w</Text>
                               </View>
+                              {(() => {
+                                const recipe = (recipes || []).find(rr => rr.id === p.recipes_id);
+                                return (
+                                  <Text style={[styles.cardSubtitle, { color: colors.icon, marginTop: 2 }]}>Recipe: {recipe?.name || '-'} {recipe?.total_price_kg != null ? `• $${Number(recipe.total_price_kg).toLocaleString()} / kg` : ''}</Text>
+                                );
+                              })()}
+
                               {(recipeItems[p.recipes_id] || []).map((it, idx) => {
                                 const grams = (totalFeedKg * 1000) * (it.percentages / 100);
                                 return (
