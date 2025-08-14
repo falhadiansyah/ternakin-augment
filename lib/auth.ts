@@ -10,45 +10,53 @@ export const authHelpers = {
   // Sign in with Google OAuth
   async signInWithGoogle() {
     try {
-      // Different redirect URI for different platforms
-      let redirectTo: string;
-
+      console.log('Starting Google OAuth...');
+      
+      // For mobile platforms, we need to handle the OAuth flow differently
       if (Platform.OS === 'web') {
-        // For web browser, use the current origin
-        redirectTo = `${window.location.origin}/auth/callback`;
-      } else {
-        // For mobile (iOS/Android), use the app scheme
-        redirectTo = makeRedirectUri({
-          scheme: 'ternakin',
-          path: 'auth/callback',
-        });
-      }
-
-      console.log('Redirect URI:', redirectTo);
-      const redirectUri = makeRedirectUri({
-        scheme: 'ternakin',
-        path: 'auth/callback'
-      });
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUri,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+        // Web flow
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
           },
-        },
-      });
-
-      if (error) {
-        console.error('Google OAuth error:', error);
+        });
+        
+        if (error) {
+          console.error('Google OAuth error:', error);
+          return { data: null, error: error.message };
+        }
+        
+        return { data, error: null };
+      } else {
+        // Mobile flow - use deep linking
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: 'ternakin://auth/callback',
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
+          },
+        });
+        
+        if (error) {
+          console.error('Google OAuth error:', error);
+          return { data: null, error: error.message };
+        }
+        
+        // For mobile, we need to wait for the session to be established
+        // The OAuth flow will redirect back to our app
+        return { data, error: null };
       }
-
-      return { data, error };
     } catch (error: any) {
       console.error('Google OAuth exception:', error);
-      return { data: null, error: error.message };
+      return { data: null, error: error.message || 'Failed to start Google OAuth' };
     }
   },
 

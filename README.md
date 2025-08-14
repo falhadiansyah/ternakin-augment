@@ -1,202 +1,174 @@
-# Ternakin - Livestock Management App 🐄
+# Ternakin - Livestock Management App
 
-A modern livestock management application built with React Native, Expo, and Supabase.
+A comprehensive livestock management application built with React Native, Expo, and Supabase.
 
-## Features ✨
+## Features
 
-### Authentication
-- **Email OTP Login**: Secure login with email verification
-- **Google OAuth**: Sign in with Google account
-- **Multi-platform Support**: Works on Web, iOS, and Android
+- 🐄 Livestock batch management
+- 📊 Financial tracking and reporting
+- 🥗 Feeding plan management
+- 📈 Dashboard with analytics
+- 🔐 Secure authentication (Google OAuth + Email OTP)
+- 🌙 Dark/Light theme support
+- 🌍 Multi-language support (English/Indonesian)
 
-### User Interface
-- **Dark/Light Theme**: Toggle between dark and light modes
-- **Multi-language Support**: English and Indonesian
-- **Responsive Design**: Optimized for all screen sizes
-
-### Navigation
-- **Tab-based Navigation**: Easy access to all features
-- **Header with Actions**: Logout, theme toggle, language switch, and notifications
-- **Profile Management**: User profile and farm details
-
-### Core Features
-- **Dashboard**: Overview of livestock metrics
-- **Livestock Management**: Track your animals
-- **Feeding Schedule**: Manage feeding routines
-- **Financial Tracking**: Monitor income and expenses
-
-## Getting Started 🚀
+## Quick Start
 
 ### Prerequisites
-- Node.js (v16 or higher)
+
+- Node.js 18+ 
 - npm or yarn
 - Expo CLI
+- Android Studio (for Android development)
+- Google Cloud Console account
 - Supabase account
 
 ### Installation
 
 1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd ternakin
-   ```
+```bash
+git clone <repository-url>
+cd ternakin
+```
 
 2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Configure Supabase**
-   - Create a new Supabase project
-   - Copy your project URL and anon key
-   - Update `lib/supabase.ts` with your credentials
-
-4. **Setup OAuth (Optional)**
-   - Follow the guide in `SUPABASE_OAUTH_SETUP.md`
-   - Configure Google OAuth for enhanced login experience
-
-5. **Start the development server**
-   ```bash
-   npx expo start
-   ```
-
-## Development 🛠️
-
-### Project Structure
-```
-ternakin/
-├── app/                    # App screens and navigation
-├── components/             # Reusable components
-│   ├── ui/                # UI components
-│   ├── AuthProvider.tsx   # Authentication context
-│   ├── ThemeProvider.tsx  # Theme management
-│   └── LanguageProvider.tsx # Internationalization
-├── lib/                   # Utilities and configurations
-├── constants/             # App constants
-└── types/                 # TypeScript type definitions
+```bash
+npm install
 ```
 
-### Key Components
+3. **Configure OAuth (Required for Google Sign-In)**
+```bash
+# Run the configuration test
+chmod +x scripts/test-oauth.sh
+./scripts/test-oauth.sh
+```
 
-#### Authentication
-- `AuthProvider`: Manages user authentication state
-- `AuthGuard`: Protects routes from unauthorized access
-- `useAuthContext`: Hook for authentication functions
+4. **Follow the OAuth setup guide**
+See [SUPABASE_OAUTH_SETUP.md](./SUPABASE_OAUTH_SETUP.md) for detailed instructions.
 
-#### Theme Management
-- `ThemeProvider`: Manages dark/light theme
-- `useTheme`: Hook for theme state and functions
-- Supports system, light, and dark modes
-
-#### Internationalization
-- `LanguageProvider`: Manages app language
-- `useLanguage`: Hook for translation functions
-- Supports English and Indonesian
-
-#### UI Components
-- `Header`: Main navigation header with actions
-- `Button`, `Input`, `Modal`: Reusable UI components
-- Responsive and theme-aware design
-
-### Available Scripts
+### Development
 
 ```bash
 # Start development server
-npm start
+npx expo start
 
-# Run on iOS simulator
-npm run ios
+# Run on Android
+npx expo run:android
 
-# Run on Android emulator
-npm run android
+# Run on iOS
+npx expo run:ios
 
 # Run on web
-npm run web
-
-# Build for production
-npm run build
+npx expo start --web
 ```
 
-## Configuration ⚙️
+## OAuth Configuration
 
-### Environment Variables
-Create a `.env` file in the root directory:
+### Google Sign-In Setup
 
-```env
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+The app requires Google OAuth configuration to enable "Continue with Google" functionality. Follow these steps:
+
+1. **Google Cloud Console Setup**
+   - Create OAuth 2.0 Client ID for Android
+   - Generate SHA-1 fingerprint
+   - Configure package name: `com.ternakin.app`
+
+2. **Supabase Configuration**
+   - Enable Google provider
+   - Add OAuth credentials
+   - Configure redirect URIs
+
+3. **Android App Configuration**
+   - Update `google-services.json`
+   - Verify build configuration
+   - Test deep linking
+
+### Quick OAuth Test
+
+```bash
+# Check OAuth configuration
+./scripts/test-oauth.sh
+
+# Clean and rebuild
+npx expo prebuild --clean
+npx expo run:android
 ```
 
-### Supabase Setup
-1. Create tables as defined in `lib/database-schema.sql`
-2. Apply RLS policies from `lib/rls-policies.sql`
-3. Configure authentication providers in Supabase dashboard
+## Project Structure
 
-## Features in Detail 📋
+```
+ternakin/
+├── app/                    # App screens and navigation
+├── components/            # Reusable UI components
+├── lib/                   # API and utility functions
+├── constants/             # Design system and constants
+├── types/                 # TypeScript type definitions
+├── utils/                 # Helper functions
+├── android/               # Android-specific configuration
+└── supabase/              # Database migrations
+```
 
-### Authentication System
-- **Email OTP**: Secure one-time password via email
-- **Google OAuth**: Social login with Google
-- **Session Management**: Automatic session handling
-- **Logout**: Secure logout with confirmation
+## Authentication Flow
 
-### Theme System
-- **Dark Mode**: Eye-friendly dark theme
-- **Light Mode**: Clean light theme
-- **System Mode**: Follows device settings
-- **Persistent**: Remembers user preference
+1. **Google OAuth**: Uses Supabase OAuth with Google provider
+2. **Email OTP**: Fallback authentication method
+3. **Session Management**: Automatic token refresh and persistence
+4. **Deep Linking**: Handles OAuth callbacks on mobile
 
-### Language System
-- **English**: Default language
-- **Indonesian**: Localized content
-- **Easy Toggle**: Quick language switch
-- **Persistent**: Remembers user preference
+## Database Schema
 
-### Navigation Features
-- **Header Actions**: 
-  - Theme toggle (sun/moon icon)
-  - Language switch (EN/ID)
-  - Notifications (bell icon)
-  - Logout (logout icon)
-- **Tab Navigation**: Dashboard, Livestock, Feeding, Financial
-- **Profile Access**: Quick access to user profile
+The app uses Supabase with the following main tables:
+- `profiles` - User profiles
+- `farms` - Farm information
+- `batches` - Livestock batches
+- `recipes` - Feed recipes
+- `feeding_plan` - Feeding schedules
+- `finance_cashbook` - Financial transactions
 
-## Troubleshooting 🔧
+## Troubleshooting
 
 ### Common Issues
 
-1. **Google OAuth not working**
-   - Check `SUPABASE_OAUTH_SETUP.md`
-   - Verify redirect URIs configuration
-   - Ensure proper Supabase setup
+1. **"Continue with Google" button not working**
+   - Check OAuth configuration
+   - Verify Google Services setup
+   - Review console logs
 
-2. **Theme not persisting**
-   - Check AsyncStorage permissions
-   - Verify ThemeProvider implementation
+2. **Build errors**
+   - Clean project and rebuild
+   - Check dependency versions
+   - Verify Android configuration
 
-3. **Language not changing**
-   - Check LanguageProvider setup
-   - Verify translation keys
+3. **OAuth redirect fails**
+   - Check redirect URI configuration
+   - Verify Supabase settings
+   - Test with different accounts
 
-4. **Build errors**
-   - Clear cache: `npx expo start --clear`
-   - Reinstall dependencies: `npm install`
+### Debug Steps
 
-## Contributing 🤝
+1. Run configuration test: `./scripts/test-oauth.sh`
+2. Check console logs for errors
+3. Verify Supabase dashboard configuration
+4. Test OAuth flow step by step
+
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Test thoroughly
 5. Submit a pull request
 
-## License 📄
+## License
 
 This project is licensed under the MIT License.
 
-## Support 💬
+## Support
 
-For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review troubleshooting guide
+For OAuth setup help, see [SUPABASE_OAUTH_SETUP.md](./SUPABASE_OAUTH_SETUP.md).
+
+For general support:
+- Check the troubleshooting section
+- Review console logs
+- Verify configuration files
+- Test with minimal setup first
