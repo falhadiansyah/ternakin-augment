@@ -54,17 +54,6 @@
         "projectId": "f616167d-5581-4529-840b-61320b4e54d4"
       }
     },
-    "hooks": {
-      "postPublish": [
-        {
-          "file": "sentry-expo/upload-sourcemaps",
-          "config": {
-            "organization": "your-sentry-org",
-            "project": "your-sentry-project"
-          }
-        }
-      ]
-    },
     "owner": "falhadiansyah"
   }
 }
