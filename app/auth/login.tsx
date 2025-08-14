@@ -3,7 +3,6 @@ import { useLanguage } from '@/components/LanguageProvider';
 import { useTheme } from '@/components/ThemeProvider';
 import { Button, Input, Loading } from '@/components/ui';
 import { Colors } from '@/constants/Colors';
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -150,23 +149,6 @@ export default function LoginScreen() {
                 onPress={handleEmailOTP}
                 loading={loading}
               />
-
-              <View style={styles.divider}>
-                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                <Text style={[styles.dividerText, { color: colors.icon }]}>or</Text>
-                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.googleButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={handleGoogleLogin}
-                disabled={loading}
-              >
-                <Ionicons name="logo-google" size={20} color="#4285F4" />
-                <Text style={[styles.buttonText, { color: colors.text }]}>
-                  {t('auth.continue_with_google')}
-                </Text>
-              </TouchableOpacity>
             </View>
           </View>
         ) : (
