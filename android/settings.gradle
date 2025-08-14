@@ -6,7 +6,7 @@ pluginManagement {
     }.standardOutput.asText.get().trim()
   ).getParentFile().absolutePath
   includeBuild(reactNativeGradlePlugin)
-  
+
   def expoPluginsPath = new File(
     providers.exec {
       workingDir(rootDir)
@@ -35,5 +35,6 @@ rootProject.name = 'ternakin'
 
 expoAutolinking.useExpoVersionCatalog()
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include ':app'
 includeBuild(expoAutolinking.reactNativeGradlePlugin)
