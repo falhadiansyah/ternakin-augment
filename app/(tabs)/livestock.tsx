@@ -1,10 +1,11 @@
 import { Header } from '@/components/Header';
 import { useLanguage } from '@/components/LanguageProvider';
+import SubscriptionWarning from '@/components/SubscriptionWarning';
 import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
-import { createTransaction, getGrowthRowWithFallback, listBatches, recomputeAndUpdateBatchAges, type BatchRow } from '@/lib/data';
+import { canAddBatch, createTransaction, getGrowthRowWithFallback, listBatches, recomputeAndUpdateBatchAges, type BatchRow } from '@/lib/data';
 import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -41,6 +42,12 @@ export default function LivestockScreen() {
     vaccine?: string | null;
     feed_gr?: number | null;
   }>>({});
+  const [subscriptionInfo, setSubscriptionInfo] = useState<{
+    canAdd: boolean;
+    currentCount: number;
+    maxAllowed: number;
+    subscriptionLevel: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     // recompute ages before showing
@@ -48,6 +55,11 @@ export default function LivestockScreen() {
     const { data, error } = await listBatches();
     if (error) setError(error.message); else setError(null);
     setBatches(data || []);
+    
+    // Get subscription info
+    const subscriptionData = await canAddBatch();
+    setSubscriptionInfo(subscriptionData);
+    
     setLoading(false);
   }, []);
 
@@ -245,14 +257,39 @@ export default function LivestockScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: Spacing.xl }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
         <View style={styles.toolbar}>
-          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }, shadow]}
+          {subscriptionInfo && (
+            <SubscriptionWarning
+              subscriptionLevel={subscriptionInfo.subscriptionLevel}
+              currentCount={subscriptionInfo.currentCount}
+              maxAllowed={subscriptionInfo.maxAllowed}
+              dataType="batches"
+              onUpgrade={() => {
+                showToast('Please contact support to upgrade your subscription', 'info');
+              }}
+            />
+          )}
+          <TouchableOpacity 
+            style={[
+              styles.actionBtn, 
+              { 
+                backgroundColor: subscriptionInfo?.canAdd ? colors.primary : '#ccc'
+              }, 
+              shadow
+            ]}
             onPress={() => {
+              if (!subscriptionInfo?.canAdd) {
+                showToast(`Cannot add more batches. Upgrade to Pro plan for unlimited batches.`, 'error');
+                return;
+              }
               // Navigate to Batch Form
               const { router } = require('expo-router');
               router.push('/batch/form');
-            }}>
+            }}
+            disabled={!subscriptionInfo?.canAdd}>
             <Ionicons name="add" color="#fff" size={16} />
-            <Text style={styles.actionBtnText}>Add New Batch</Text>
+            <Text style={styles.actionBtnText}>
+              {subscriptionInfo?.canAdd ? 'Add New Batch' : 'Limit Reached'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -699,6 +736,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.caption,
     fontWeight: Typography.weight.medium,
   },
+
   modalActions: {
     flexDirection: 'row',
     gap: Spacing.sm,

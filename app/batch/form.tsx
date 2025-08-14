@@ -3,7 +3,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
-import { createBatch, getBatchById, updateBatch } from '@/lib/data';
+import { canAddBatch, createBatch, getBatchById, updateBatch } from '@/lib/data';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -63,6 +63,16 @@ export default function BatchFormScreen() {
 
   const submit = async () => {
     if (!validate()) return;
+    
+    // Check subscription limit for new batches
+    if (!isEdit) {
+      const subscriptionCheck = await canAddBatch();
+      if (!subscriptionCheck.canAdd) {
+        showToast(`Cannot add more batches. Upgrade to Pro plan for unlimited batches.`, 'error');
+        return;
+      }
+    }
+    
     try {
       setLoading(true);
       const payload = {

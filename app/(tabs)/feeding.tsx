@@ -1,11 +1,12 @@
 import Picker from '@/components/forms/Picker';
 import { Header } from '@/components/Header';
 import { useLanguage } from '@/components/LanguageProvider';
+import SubscriptionWarning from '@/components/SubscriptionWarning';
 import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
-import { createFeedingPlan, deleteRecipe, getGrowthRowWithFallback, getRecipeItems, listBatches, listFeedingPlan, listRecipes, recomputeAndUpdateBatchAges, type BatchRow, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
+import { canAddRecipe, createFeedingPlan, deleteRecipe, getGrowthRowWithFallback, getRecipeItems, listBatches, listFeedingPlan, listRecipes, recomputeAndUpdateBatchAges, type BatchRow, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
 import { formatIDR } from '@/utils/currency';
 import { showToast } from '@/utils/toast';
 
@@ -43,6 +44,12 @@ export default function FeedingScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [subscriptionInfo, setSubscriptionInfo] = useState<{
+    canAdd: boolean;
+    currentCount: number;
+    maxAllowed: number;
+    subscriptionLevel: string;
+  } | null>(null);
   const insets = useSafeAreaInsets();
 
 
@@ -81,6 +88,11 @@ export default function FeedingScreen() {
       growthMap[bat.id] = { feed_gr: g?.feed_gr ?? null, water_ml: g?.water_ml ?? null };
     }
     setGrowthByBatch(growthMap);
+    
+    // Get subscription info for recipes
+    const subscriptionData = await canAddRecipe();
+    setSubscriptionInfo(subscriptionData);
+    
     setLoading(false);
   }, []);
 
@@ -137,13 +149,38 @@ export default function FeedingScreen() {
           {error && <Text style={{ color: colors.error, marginBottom: Spacing.sm }}>Failed to load: {error}</Text>}
         {range === 'recipes' && (
           <View style={[styles.toolbar, { padding: 0, marginBottom: 10 }]}>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}
+            {subscriptionInfo && (
+              <SubscriptionWarning
+                subscriptionLevel={subscriptionInfo.subscriptionLevel}
+                currentCount={subscriptionInfo.currentCount}
+                maxAllowed={subscriptionInfo.maxAllowed}
+                dataType="recipes"
+                onUpgrade={() => {
+                  showToast('Please contact support to upgrade your subscription', 'info');
+                }}
+              />
+            )}
+            <TouchableOpacity 
+              style={[
+                styles.actionBtn, 
+                { 
+                  backgroundColor: subscriptionInfo?.canAdd ? colors.primary : '#ccc'
+                }
+              ]} 
+              activeOpacity={0.8}
               onPress={() => {
+                if (!subscriptionInfo?.canAdd) {
+                  showToast(`Cannot add more recipes. Upgrade to Pro plan for unlimited recipes.`, 'error');
+                  return;
+                }
                 const { router } = require('expo-router');
                 router.push('/recipe/form');
-              }}>
+              }}
+              disabled={!subscriptionInfo?.canAdd}>
               <Ionicons name="add" color="#fff" size={16} />
-              <Text style={styles.addBtnText}>{t('recipe.add_recipe') || 'Add Recipe'}</Text>
+              <Text style={styles.addBtnText}>
+                {subscriptionInfo?.canAdd ? (t('recipe.add_recipe') || 'Add Recipe') : 'Limit Reached'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -407,4 +444,5 @@ const styles = StyleSheet.create({
   ingPercent: { width: 50, textAlign: 'right' as const },
   ingWeight: { width: 60, textAlign: 'right' as const },
   cardSubtitle: { fontSize: Typography.caption },
+
 });

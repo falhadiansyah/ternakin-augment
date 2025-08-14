@@ -3,7 +3,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
-import { createRecipe, getRecipeById, getRecipeItems, replaceRecipeItems, updateRecipe } from '@/lib/data';
+import { canAddRecipe, createRecipe, getRecipeById, getRecipeItems, replaceRecipeItems, updateRecipe } from '@/lib/data';
 import { formatIDR } from '@/utils/currency';
 import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,6 +80,16 @@ export default function RecipeFormScreen() {
 
   const submit = async () => {
     if (!validate()) return;
+    
+    // Check subscription limit for new recipes
+    if (!isEdit) {
+      const subscriptionCheck = await canAddRecipe();
+      if (!subscriptionCheck.canAdd) {
+        showToast(`Cannot add more recipes. Upgrade to Pro plan for unlimited recipes.`, 'error');
+        return;
+      }
+    }
+    
     try {
       setLoading(true);
       if (isEdit) {

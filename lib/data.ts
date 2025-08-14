@@ -38,10 +38,29 @@ export async function getCurrentFarmId(): Promise<{ farmId: string | null; error
 }
 
 export async function listBatches() {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { data: null, error: fe };
+  if (!farmId) return { data: null, error: new Error('No farm assigned to your profile') };
+
+  // Get farm subscription level
+  const { data: farmData, error: farmError } = await supabase
+    .from('farms')
+    .select('subscription_level')
+    .eq('id', farmId)
+    .single();
+
+  if (farmError) return { data: null, error: farmError };
+
+  const subscriptionLevel = farmData.subscription_level as 'freetrial' | 'basic' | 'pro';
+  const maxBatches = subscriptionLevel === 'freetrial' ? 50 : subscriptionLevel === 'basic' ? 200 : Infinity;
+
   const { data, error } = await supabase
     .from('batches')
     .select('*')
-    .order('created_at', { ascending: false });
+    .eq('farm_id', farmId)
+    .order('created_at', { ascending: false })
+    .limit(maxBatches);
+
   return { data: (data || []) as BatchRow[], error };
 }
 
@@ -86,10 +105,29 @@ export type RecipeItemRow = {
 };
 
 export async function listRecipes() {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { data: null, error: fe };
+  if (!farmId) return { data: null, error: new Error('No farm assigned to your profile') };
+
+  // Get farm subscription level
+  const { data: farmData, error: farmError } = await supabase
+    .from('farms')
+    .select('subscription_level')
+    .eq('id', farmId)
+    .single();
+
+  if (farmError) return { data: null, error: farmError };
+
+  const subscriptionLevel = farmData.subscription_level as 'freetrial' | 'basic' | 'pro';
+  const maxRecipes = subscriptionLevel === 'freetrial' ? 50 : subscriptionLevel === 'basic' ? 200 : Infinity;
+
   const { data, error } = await supabase
     .from('recipes')
     .select('*')
-    .order('created_at', { ascending: false });
+    .eq('farm_id', farmId)
+    .order('created_at', { ascending: false })
+    .limit(maxRecipes);
+
   return { data: (data || []) as RecipeRow[], error };
 }
 
@@ -465,14 +503,16 @@ export async function recomputeAndUpdateBatchAges(): Promise<{ updated: number; 
   if (error) return { updated: 0, errors: 1 };
   let updated = 0;
   let errors = 0;
-  for (const b of batches) {
-    const { days, weeks } = computeAge(b.entry_date);
-    if (days !== (b.current_age_days || 0) || weeks !== (b.current_age_weeks || 0)) {
-      const { error: ue } = await supabase
-        .from('batches')
-        .update({ current_age_days: days, current_age_weeks: weeks })
-        .eq('id', b.id);
-      if (ue) errors += 1; else updated += 1;
+  if (batches) {
+    for (const b of batches) {
+      const { days, weeks } = computeAge(b.entry_date);
+      if (days !== (b.current_age_days || 0) || weeks !== (b.current_age_weeks || 0)) {
+        const { error: ue } = await supabase
+          .from('batches')
+          .update({ current_age_days: days, current_age_weeks: weeks })
+          .eq('id', b.id);
+        if (ue) errors += 1; else updated += 1;
+      }
     }
   }
   return { updated, errors };
@@ -531,4 +571,63 @@ export async function updateFeedingPlan(id: string, payload: Partial<{ recipes_i
 export async function deleteFeedingPlan(id: string) {
   const { error } = await supabase.from('feeding_plan').delete().eq('id', id);
   return { error };
+}
+
+// Subscription check functions
+export async function canAddBatch(): Promise<{ canAdd: boolean; currentCount: number; maxAllowed: number; subscriptionLevel: string }> {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { canAdd: false, currentCount: 0, maxAllowed: 0, subscriptionLevel: 'freetrial' };
+  if (!farmId) return { canAdd: false, currentCount: 0, maxAllowed: 0, subscriptionLevel: 'freetrial' };
+
+  // Get current batch count
+  const { count: currentCount, error: countError } = await supabase
+    .from('batches')
+    .select('*', { count: 'exact', head: true })
+    .eq('farm_id', farmId);
+
+  if (countError) return { canAdd: false, currentCount: 0, maxAllowed: 0, subscriptionLevel: 'freetrial' };
+
+  // Get farm subscription level
+  const { data: farmData, error: farmError } = await supabase
+    .from('farms')
+    .select('subscription_level')
+    .eq('id', farmId)
+    .single();
+
+  if (farmError) return { canAdd: false, currentCount: 0, maxAllowed: 0, subscriptionLevel: 'freetrial' };
+
+  const subscriptionLevel = farmData.subscription_level as 'freetrial' | 'basic' | 'pro';
+  const maxAllowed = subscriptionLevel === 'freetrial' ? 50 : subscriptionLevel === 'basic' ? 200 : Infinity;
+  const canAdd = subscriptionLevel === 'pro' || (currentCount || 0) < maxAllowed;
+
+  return { canAdd, currentCount: currentCount || 0, maxAllowed, subscriptionLevel };
+}
+
+export async function canAddRecipe(): Promise<{ canAdd: boolean; currentCount: number; maxAllowed: number; subscriptionLevel: string }> {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { canAdd: false, currentCount: 0, maxAllowed: 0, subscriptionLevel: 'freetrial' };
+  if (!farmId) return { canAdd: false, currentCount: 0, maxAllowed: 0, subscriptionLevel: 'freetrial' };
+
+  // Get current recipe count
+  const { count: currentCount, error: countError } = await supabase
+    .from('recipes')
+    .select('*', { count: 'exact', head: true })
+    .eq('farm_id', farmId);
+
+  if (countError) return { canAdd: false, currentCount: 0, maxAllowed: 0, subscriptionLevel: 'freetrial' };
+
+  // Get farm subscription level
+  const { data: farmData, error: farmError } = await supabase
+    .from('farms')
+    .select('subscription_level')
+    .eq('id', farmId)
+    .single();
+
+  if (farmError) return { canAdd: false, currentCount: 0, maxAllowed: 0, subscriptionLevel: 'freetrial' };
+
+  const subscriptionLevel = farmData.subscription_level as 'freetrial' | 'basic' | 'pro';
+  const maxAllowed = subscriptionLevel === 'freetrial' ? 50 : subscriptionLevel === 'basic' ? 200 : Infinity;
+  const canAdd = subscriptionLevel === 'pro' || (currentCount || 0) < maxAllowed;
+
+  return { canAdd, currentCount: currentCount || 0, maxAllowed, subscriptionLevel };
 }
