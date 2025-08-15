@@ -3,6 +3,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
+import { useCurrency } from '@/hooks/useCurrency';
 import { canAddRecipe, createRecipe, getRecipeById, getRecipeItems, replaceRecipeItems, updateRecipe } from '@/lib/data';
 import { formatIDR } from '@/utils/currency';
 import { showToast } from '@/utils/toast';
@@ -16,6 +17,8 @@ const types = ['custom_mix','commercial'] as const;
 const usedFor = ['starter','grower','finisher'] as const;
 
 export default function RecipeFormScreen() {
+  // subscribe to currency changes for re-render
+  useCurrency();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEdit = !!id;
@@ -80,7 +83,7 @@ export default function RecipeFormScreen() {
 
   const submit = async () => {
     if (!validate()) return;
-    
+
     // Check subscription limit for new recipes
     if (!isEdit) {
       const subscriptionCheck = await canAddRecipe();
@@ -89,7 +92,7 @@ export default function RecipeFormScreen() {
         return;
       }
     }
-    
+
     try {
       setLoading(true);
       if (isEdit) {

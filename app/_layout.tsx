@@ -1,4 +1,5 @@
 import { AuthProvider } from "@/components/AuthProvider";
+import { CurrencyInitializer } from "@/components/CurrencyInitializer";
 
 import { FontProvider } from "@/components/FontProvider";
 import { LanguageProvider } from "@/components/LanguageProvider";
@@ -15,6 +16,7 @@ export default function RootLayout() {
           <AuthProvider>
             <SafeAreaProvider>
               <StatusBar style="auto" />
+              <CurrencyInitializer />
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="auth/login" options={{ presentation: "modal" }} />

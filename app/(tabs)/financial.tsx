@@ -4,9 +4,10 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
+import { useCurrency } from '@/hooks/useCurrency';
 import { getBalance, listTransactions, type CashbookRow } from '@/lib/data';
+import { formatCompactIDR } from '@/utils/currency';
 import { normalizeToLocalDate, parseYMDLocal } from '@/utils/date';
-import { formatCompactIDR } from '@/utils/number';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,6 +16,8 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, Toucha
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FinancialScreen() {
+  // subscribe to currency selection so values re-render
+  useCurrency();
   const { isDark } = useTheme();
   const { t } = useLanguage();
   const colors = Colors[isDark ? 'dark' : 'light'];

@@ -37,6 +37,31 @@ export async function getCurrentFarmId(): Promise<{ farmId: string | null; error
   return { farmId: profile?.farm_id ?? null, error: null };
 }
 
+export async function getFarmCurrency(): Promise<{ code: string; error: any | null }> {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { code: 'IDR', error: fe };
+  if (!farmId) return { code: 'IDR', error: new Error('No farm assigned to your profile') };
+  const { data, error } = await supabase
+    .from('farms')
+    .select('currency')
+    .eq('id', farmId)
+    .maybeSingle();
+  if (error) return { code: 'IDR', error };
+  const code = (data?.currency as string) || 'IDR';
+  return { code, error: null };
+}
+
+export async function updateFarmCurrency(code: string): Promise<{ ok: boolean; error: any | null }> {
+  const { farmId, error: fe } = await getCurrentFarmId();
+  if (fe) return { ok: false, error: fe };
+  if (!farmId) return { ok: false, error: new Error('No farm assigned to your profile') };
+  const { error } = await supabase
+    .from('farms')
+    .update({ currency: code })
+    .eq('id', farmId);
+  return { ok: !error, error };
+}
+
 export async function listBatches() {
   const { farmId, error: fe } = await getCurrentFarmId();
   if (fe) return { data: null, error: fe };

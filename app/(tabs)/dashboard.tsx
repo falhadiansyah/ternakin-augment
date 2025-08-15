@@ -5,15 +5,19 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
+import { useCurrency } from '@/hooks/useCurrency';
 import { getBalance, listBatches, listTransactions } from '@/lib/data';
+import { formatCompactIDR } from '@/utils/currency';
 import { parseYMDLocal } from '@/utils/date';
-import { formatCompactIDR, formatCompactNumber } from '@/utils/number';
+import { formatCompactNumber } from '@/utils/number';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DashboardScreen() {
+  // subscribe to currency changes for re-render
+  useCurrency();
   const { isDark } = useTheme();
   const { t } = useLanguage();
   const colors = Colors[isDark ? 'dark' : 'light'];

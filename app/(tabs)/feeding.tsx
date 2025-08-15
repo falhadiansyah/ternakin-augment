@@ -6,6 +6,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
+import { useCurrency } from '@/hooks/useCurrency';
 import { canAddRecipe, createFeedingPlan, deleteRecipe, getGrowthRowWithFallback, getRecipeItems, listBatches, listFeedingPlan, listRecipes, recomputeAndUpdateBatchAges, type BatchRow, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
 import { formatIDR } from '@/utils/currency';
 import { showToast } from '@/utils/toast';
@@ -20,6 +21,8 @@ import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FeedingScreen() {
+  // subscribe to currency changes for re-render
+  useCurrency();
   const router = useRouter();
   const { isDark } = useTheme();
   const { t } = useLanguage();
@@ -88,11 +91,11 @@ export default function FeedingScreen() {
       growthMap[bat.id] = { feed_gr: g?.feed_gr ?? null, water_ml: g?.water_ml ?? null };
     }
     setGrowthByBatch(growthMap);
-    
+
     // Get subscription info for recipes
     const subscriptionData = await canAddRecipe();
     setSubscriptionInfo(subscriptionData);
-    
+
     setLoading(false);
   }, []);
 
@@ -160,13 +163,13 @@ export default function FeedingScreen() {
                 }}
               />
             )}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
-                styles.actionBtn, 
-                { 
+                styles.actionBtn,
+                {
                   backgroundColor: subscriptionInfo?.canAdd ? colors.primary : '#ccc'
                 }
-              ]} 
+              ]}
               activeOpacity={0.8}
               onPress={() => {
                 if (!subscriptionInfo?.canAdd) {

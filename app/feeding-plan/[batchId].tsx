@@ -4,6 +4,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
+import { useCurrency } from '@/hooks/useCurrency';
 import { createFeedingPlan, deleteFeedingPlan, getRecipeItems, listBatches, listFeedingPlan, listRecipes, updateFeedingPlan, type BatchRow, type FeedingPlanRow, type RecipeItemRow, type RecipeRow } from '@/lib/data';
 import { formatIDR } from '@/utils/currency';
 import { showToast } from '@/utils/toast';
@@ -21,6 +22,8 @@ interface FeedingPlanForm {
 }
 
 export default function FeedingPlanScreen() {
+  // subscribe to currency changes for re-render
+  useCurrency();
   const router = useRouter();
   const params = useLocalSearchParams();
   const { isDark } = useTheme();

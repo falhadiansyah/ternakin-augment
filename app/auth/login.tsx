@@ -10,11 +10,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
   const { isDark } = useTheme();
-  const { t } = useLanguage();
+  const { t, setLanguage, language } = useLanguage();
   const colors = Colors[isDark ? 'dark' : 'light'];
   const { signInWithGoogle, signInWithOTP, verifyOTP, loading, error } = useAuthContext();
 
   const [email, setEmail] = useState('');
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [emailError, setEmailError] = useState('');
@@ -112,6 +113,12 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
 
+      <View style={styles.authHeader}>
+        <TouchableOpacity onPress={() => setLanguage(language === 'en' ? 'id' : 'en')}>
+          <Text style={{ color: colors.primary, fontWeight: '600' }}>{language === 'en' ? 'ID' : 'EN'}</Text>
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView
         style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -143,11 +150,44 @@ export default function LoginScreen() {
               error={emailError}
             />
 
+
+            {/* Privacy Policy consent checkbox */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+              <TouchableOpacity
+                onPress={() => setAcceptedPrivacy(!acceptedPrivacy)}
+                activeOpacity={0.7}
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  marginRight: 10,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 4,
+                  backgroundColor: acceptedPrivacy ? colors.primary : 'transparent',
+                }}
+              >
+                {acceptedPrivacy ? <Text style={{ color: '#fff', fontWeight: 'bold' }}>✓</Text> : null}
+              </TouchableOpacity>
+              <Text style={[styles.disclaimer, { color: colors.icon, flex: 1 }]}>
+                {t('auth.terms_disclaimer').replace('Terms of Service and Privacy Policy', '')}
+                <Text onPress={() => router.push('/auth/terms-of-service')} style={{ color: colors.primary, textDecorationLine: 'underline' }}>
+                  Terms of Service
+                </Text>
+                {' '}{t('common.and')}{' '}
+                <Text onPress={() => router.push('/auth/privacy-policy')} style={{ color: colors.primary, textDecorationLine: 'underline' }}>
+                  {t('auth.privacy_policy')}
+                </Text>
+              </Text>
+            </View>
+
             <View style={styles.buttonContainer}>
               <Button
                 title={t('auth.send_otp')}
                 onPress={handleEmailOTP}
                 loading={loading}
+                disabled={!acceptedPrivacy}
               />
             </View>
           </View>
@@ -188,9 +228,7 @@ export default function LoginScreen() {
           </View>
         )}
 
-        <Text style={[styles.disclaimer, { color: colors.icon }]}>
-          {t('auth.terms_disclaimer')}
-        </Text>
+
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -204,6 +242,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     padding: 16,
+  },
+  authHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   closeButton: {
     padding: 8,
@@ -280,8 +324,6 @@ const styles = StyleSheet.create({
   },
   disclaimer: {
     fontSize: 12,
-    textAlign: 'center',
     lineHeight: 16,
-    marginTop: 32,
   },
 });

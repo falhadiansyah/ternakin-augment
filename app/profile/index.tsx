@@ -19,8 +19,8 @@ export default function ProfileScreen() {
   };
 
   const handleSettings = () => {
-    // TODO: Navigate to settings
-    console.log('Settings pressed');
+    const { router } = require('expo-router');
+    router.push('/profile/settings');
   };
 
   const handleLogout = async () => {
@@ -49,13 +49,14 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('nav.profile')}</Text>
         <TouchableOpacity
-          style={styles.closeButton}
+          style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="close" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.text }]}>{t('nav.profile')}</Text>
+        <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.content}>
@@ -159,6 +160,12 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 8,
+  },
+  backButton: {
+    padding: 4,
+  },
+  placeholder: {
+    width: 32,
   },
   content: {
     flex: 1,

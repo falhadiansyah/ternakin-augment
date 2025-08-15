@@ -47,6 +47,7 @@ create table if not exists public.farms (
   address varchar(255),
   phone varchar(20),
   email varchar(150),
+  currency varchar(20),
   account_type varchar(100) not null default 'subscription',
   subscription_level varchar(100) not null default 'freetrial',
   subscription_from date,
@@ -193,6 +194,19 @@ create table if not exists public.balance (
 );
 create or replace trigger trg_balance_updated_at
 before update on public.balance
+for each row execute function public.set_updated_at();
+
+-- Animals
+create table if not exists public.animals (
+  id uuid primary key default gen_random_uuid(),
+  animal varchar(150),
+  breed varchar(150),
+  classification varchar(150),
+  created_at timestamp default now() not null,
+  updated_at timestamp default now() not null
+);
+create or replace trigger trg_animals_updated_at
+before update on public.animals
 for each row execute function public.set_updated_at();
 
 -- Helpful indexes
