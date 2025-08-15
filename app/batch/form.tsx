@@ -4,6 +4,7 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { canAddBatch, createBatch, getBatchById, updateBatch } from '@/lib/data';
+import { normalizeToLocalDate, parseYMDLocal, toYMDLocal } from '@/utils/date';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -43,7 +44,7 @@ export default function BatchFormScreen() {
       if (error) { Alert.alert('Error', error.message); return; }
       if (data) {
         setName(data.name);
-        setEntryDate(data.entry_date ? new Date(data.entry_date) : new Date());
+        setEntryDate(data.entry_date ? parseYMDLocal(data.entry_date) : new Date());
         setAnimal((data.animal as any) || 'chicken');
         setBreed((data.breed as any) || 'kub_2');
         setStartingCount((data.starting_count ?? '').toString());
@@ -63,7 +64,7 @@ export default function BatchFormScreen() {
 
   const submit = async () => {
     if (!validate()) return;
-    
+
     // Check subscription limit for new batches
     if (!isEdit) {
       const subscriptionCheck = await canAddBatch();
@@ -72,12 +73,12 @@ export default function BatchFormScreen() {
         return;
       }
     }
-    
+
     try {
       setLoading(true);
       const payload = {
         name: name.trim(),
-        entry_date: entryDate.toISOString().slice(0,10),
+        entry_date: toYMDLocal(entryDate),
         starting_count: Number(startingCount),
         source: source.trim() || null,
         animal,
@@ -102,7 +103,7 @@ export default function BatchFormScreen() {
   const openDate = () => setShowDate(true);
   const onChangeDate = (_: any, date?: Date) => {
     setShowDate(false); // always close on Android
-    if (date) setEntryDate(date);
+    if (date) setEntryDate(normalizeToLocalDate(date));
   };
 
   const insets = useSafeAreaInsets();
@@ -118,7 +119,7 @@ export default function BatchFormScreen() {
 
           <LabeledInput label="Entry Date">
             <TouchableOpacity onPress={openDate} style={[styles.input, { borderColor: colors.border, justifyContent:'center' }]}>
-              <Text style={{ color: colors.text }}>{entryDate.toISOString().slice(0,10)}</Text>
+              <Text style={{ color: colors.text }}>{toYMDLocal(entryDate)}</Text>
             </TouchableOpacity>
             {showDate && (
               <DateTimePicker value={entryDate} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={onChangeDate} />

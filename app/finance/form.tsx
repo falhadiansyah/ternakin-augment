@@ -4,6 +4,7 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { createTransaction, getTransactionById, listBatches, updateTransaction, type BatchRow } from '@/lib/data';
+import { normalizeToLocalDate, parseYMDLocal, toYMDLocal } from '@/utils/date';
 import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -44,7 +45,7 @@ export default function FinanceFormScreen() {
           const credit = (tx.credit || 0) > 0;
           setIsCredit(credit);
           setAmount(String(credit ? tx.credit : tx.debit || ''));
-          setDate(tx.transaction_date ? new Date(tx.transaction_date) : new Date());
+          setDate(tx.transaction_date ? parseYMDLocal(tx.transaction_date) : new Date());
           setType((tx.debit || 0) > 0 ? 'income' : 'expenses');
           setNotes(tx.notes || '');
           setBatchId(tx.batches_id || null);
@@ -69,7 +70,7 @@ export default function FinanceFormScreen() {
       const payload = {
         debit: isCredit ? 0 : Number(amount),
         credit: isCredit ? Number(amount) : 0,
-        transaction_date: date.toISOString().slice(0,10),
+        transaction_date: toYMDLocal(date),
         type: type,
         notes: notes.trim() || null,
         batches_id: batchId || null,
@@ -92,7 +93,7 @@ export default function FinanceFormScreen() {
   };
 
   const openDate = () => setShowDate(true);
-  const onChangeDate = (_: any, d?: Date) => { setShowDate(false); if (d) setDate(d); };
+  const onChangeDate = (_: any, d?: Date) => { setShowDate(false); if (d) setDate(normalizeToLocalDate(d)); };
 
   const insets = useSafeAreaInsets();
   return (
@@ -114,7 +115,7 @@ export default function FinanceFormScreen() {
 
           <LabeledInput label="Transaction Date">
             <TouchableOpacity onPress={openDate} style={[styles.input, { borderColor: colors.border, justifyContent:'center' }]}>
-              <Text style={{ color: colors.text }}>{date.toISOString().slice(0,10)}</Text>
+              <Text style={{ color: colors.text }}>{toYMDLocal(date)}</Text>
             </TouchableOpacity>
             {showDate && (
               <DateTimePicker value={date} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={onChangeDate} />

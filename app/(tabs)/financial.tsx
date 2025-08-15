@@ -5,7 +5,8 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { getBalance, listTransactions, type CashbookRow } from '@/lib/data';
-import { formatIDR, formatIDRSigned } from '@/utils/currency';
+import { normalizeToLocalDate, parseYMDLocal } from '@/utils/date';
+import { formatCompactIDR } from '@/utils/number';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
@@ -47,15 +48,15 @@ export default function FinancialScreen() {
 
     return transactions.filter(tx => {
       if (!tx.transaction_date) return false;
-      const txDate = new Date(tx.transaction_date);
+      const txDate = parseYMDLocal(tx.transaction_date);
 
       if (filterDate && filterEndDate) {
-        // Date range filter - make it inclusive and handle time zones properly
+        // Date range filter - inclusive range in local time
         const startDate = new Date(filterDate);
-        startDate.setHours(0, 0, 0, 0); // Start of day
+        startDate.setHours(0, 0, 0, 0);
 
         const endDate = new Date(filterEndDate);
-        endDate.setHours(23, 59, 59, 999); // End of day
+        endDate.setHours(23, 59, 59, 999);
 
         return txDate >= startDate && txDate <= endDate;
       } else if (filterDate) {
@@ -111,7 +112,7 @@ export default function FinancialScreen() {
               </View>
               <Text style={[styles.overviewLabel, { color: colors.icon }]}>{t('financial.net_balance')}</Text>
               <Text style={[styles.overviewValue, { color: overview.currentBalance >= 0 ? colors.primary : colors.primary }]}>
-                {formatIDR(overview.currentBalance || 0)}
+                {formatCompactIDR(overview.currentBalance || 0)}
               </Text>
             </View>
           </View>
@@ -121,14 +122,14 @@ export default function FinancialScreen() {
                 <Ionicons name="trending-up" size={24} color={colors.success} />
               </View>
               <Text style={[styles.overviewLabel, { color: colors.icon }]}>{t('financial.total_income')}</Text>
-              <Text style={[styles.overviewValue, { color: colors.success }]}>{formatIDR(overview.totalIncome || 0)}</Text>
+              <Text style={[styles.overviewValue, { color: colors.success }]}>{formatCompactIDR(overview.totalIncome || 0)}</Text>
             </View>
             <View style={[styles.overviewCard, { backgroundColor: colors.card, borderColor: colors.border }, shadow]}>
               <View style={styles.overviewIconContainer}>
                 <Ionicons name="trending-down" size={24} color={colors.error} />
               </View>
               <Text style={[styles.overviewLabel, { color: colors.icon }]}>{t('financial.total_expenses')}</Text>
-              <Text style={[styles.overviewValue, { color: colors.error }]}>{formatIDR(overview.totalExpenses || 0)}</Text>
+              <Text style={[styles.overviewValue, { color: colors.error }]}>{formatCompactIDR(overview.totalExpenses || 0)}</Text>
             </View>
           </View>
 
@@ -186,7 +187,7 @@ export default function FinancialScreen() {
               display="default"
               onChange={(_, date) => {
                 setShowDatePicker(false);
-                if (date) setFilterDate(date);
+                if (date) setFilterDate(normalizeToLocalDate(date));
               }}
             />
           )}
@@ -198,7 +199,7 @@ export default function FinancialScreen() {
               display="default"
               onChange={(_, date) => {
                 setShowEndDatePicker(false);
-                if (date) setFilterEndDate(date);
+                if (date) setFilterEndDate(normalizeToLocalDate(date));
               }}
             />
           )}
@@ -221,7 +222,7 @@ export default function FinancialScreen() {
               </View>
               <View style={styles.txRight}>
                 <Text style={{ color: (tx.debit || 0) > 0 ? colors.success : colors.error, fontWeight: Typography.weight.bold }}>
-                  {(tx.debit || 0) > 0 ? formatIDRSigned(tx.debit || 0, true) : formatIDRSigned(tx.credit || 0, false)}
+                  {(tx.debit || 0) > 0 ? formatCompactIDR(tx.debit || 0) : formatCompactIDR(tx.credit || 0)}
                 </Text>
                 <TouchableOpacity onPress={() => {
                   const { router } = require('expo-router');

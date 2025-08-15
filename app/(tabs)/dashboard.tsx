@@ -6,7 +6,8 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { getBalance, listBatches, listTransactions } from '@/lib/data';
-import { formatIDR } from '@/utils/currency';
+import { parseYMDLocal } from '@/utils/date';
+import { formatCompactIDR, formatCompactNumber } from '@/utils/number';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -90,7 +91,7 @@ export default function DashboardScreen() {
   const filterTransactionsByDateRange = (transactions: any[], start: Date, end: Date) => {
     return transactions.filter(tx => {
       if (!tx.transaction_date) return false;
-      const txDate = new Date(tx.transaction_date);
+      const txDate = parseYMDLocal(tx.transaction_date);
       return txDate >= start && txDate <= end;
     });
   };
@@ -283,7 +284,7 @@ export default function DashboardScreen() {
           <View style={styles.statsGrid}>
             <StatCard
               title="Total Livestock"
-              value={metrics.totalLivestock.value.toLocaleString()}
+              value={formatCompactNumber(metrics.totalLivestock.value)}
               delta={metrics.totalLivestock.delta}
               icon="paw"
               colors={colors}
@@ -291,7 +292,7 @@ export default function DashboardScreen() {
             />
             <StatCard
               title="Total Income"
-              value={formatIDR(metrics.totalIncome.value)}
+              value={formatCompactIDR(metrics.totalIncome.value) }
               delta={metrics.totalIncome.delta}
               icon="trending-up"
               colors={colors}
@@ -299,7 +300,7 @@ export default function DashboardScreen() {
             />
             <StatCard
               title="Total Expenses"
-              value={formatIDR(metrics.totalExpenses.value)}
+              value={formatCompactIDR(metrics.totalExpenses.value)}
               delta={metrics.totalExpenses.delta}
               icon="trending-down"
               colors={colors}
@@ -307,7 +308,7 @@ export default function DashboardScreen() {
             />
             <StatCard
               title="Net Profit"
-              value={formatIDR(metrics.netProfit.value)}
+              value={formatCompactIDR(metrics.netProfit.value)}
               delta={metrics.netProfit.delta}
               icon="wallet"
               colors={colors}
@@ -426,8 +427,8 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weight.medium,
   },
   statValue: {
-    fontSize: Typography.display,
-    fontWeight: Typography.weight.extrabold,
+    fontSize: 20,
+    fontWeight: Typography.weight.medium,
     marginBottom: Spacing.xs,
   },
   statTitle: {

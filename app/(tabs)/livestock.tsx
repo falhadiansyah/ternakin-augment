@@ -6,6 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { Radii, Shadows, Spacing } from '@/constants/Design';
 import { Typography } from '@/constants/Typography';
 import { canAddBatch, createTransaction, getGrowthRowWithFallback, listBatches, recomputeAndUpdateBatchAges, type BatchRow } from '@/lib/data';
+import { formatCompactNumber } from '@/utils/number';
 import { showToast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -55,11 +56,11 @@ export default function LivestockScreen() {
     const { data, error } = await listBatches();
     if (error) setError(error.message); else setError(null);
     setBatches(data || []);
-    
+
     // Get subscription info
     const subscriptionData = await canAddBatch();
     setSubscriptionInfo(subscriptionData);
-    
+
     setLoading(false);
   }, []);
 
@@ -202,7 +203,7 @@ export default function LivestockScreen() {
           credit: transactionType === 'expenses' ? amount : 0,
           transaction_date: transactionDate,
           type: transactionType,
-          notes: `${adjustmentType} - ${count} ${stockModal.batch.animal} from ${stockModal.batch.name}`,
+          notes: `${stockModal.batch.name}: ${adjustmentType} ${count}`,
           batches_id: stockModal.batch.id,
         });
 
@@ -268,12 +269,12 @@ export default function LivestockScreen() {
               }}
             />
           )}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
-              styles.actionBtn, 
-              { 
+              styles.actionBtn,
+              {
                 backgroundColor: subscriptionInfo?.canAdd ? colors.primary : '#ccc'
-              }, 
+              },
               shadow
             ]}
             onPress={() => {
@@ -337,7 +338,7 @@ export default function LivestockScreen() {
               <View style={styles.metricGrid}>
                 <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
                   <Ionicons name="people" size={14} color={colors.icon} />
-                  <Text style={[styles.metricTileValue, { color: colors.text }]}>{b.current_count || 0}</Text>
+                  <Text style={[styles.metricTileValue, { color: colors.text }]}>{formatCompactNumber(b.current_count || 0)}</Text>
                   <Text style={[styles.metricTileLabel, { color: colors.icon }]}>{t('livestock.total') || 'Total'}</Text>
                 </View>
 
@@ -346,7 +347,7 @@ export default function LivestockScreen() {
                   <Text style={[styles.metricTileValue, { color: colors.text }]}>
                     {b.current_age_days || 0}
                   </Text>
-                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>{t('livestock.days_weeks', { days: b.current_age_days || 0 })}</Text>
+                  <Text style={[styles.metricTileLabel, { color: colors.icon }]}>{t('livestock.days_weeks', { days: b.current_age_weeks || 0 })}</Text>
                 </View>
 
                 <View style={[styles.metricTile, { borderColor: colors.border, backgroundColor: colors.secondary }]}>
@@ -607,7 +608,6 @@ const styles = StyleSheet.create({
     borderRadius: Radii.sm,
     padding: Spacing.sm,
     alignItems: 'center',
-    gap: Spacing.xs as any,
     minHeight: 72,
     elevation: 2,
     shadowColor: '#000',
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   metricTileValue: {
-    fontSize: Typography.body,
+    fontSize: 20,
     fontWeight: Typography.weight.medium
   },
   metricTileLabel: {

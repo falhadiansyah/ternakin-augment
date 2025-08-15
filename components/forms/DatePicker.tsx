@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { normalizeToLocalDate, toYMDLocal } from '@/utils/date';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState } from 'react';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface DatePickerProps {
   label: string;
@@ -26,7 +27,7 @@ export default function DatePicker({
 
   const formatDate = (date: Date) => {
     if (mode === 'date') {
-      return date.toLocaleDateString();
+      return toYMDLocal(date);
     } else if (mode === 'time') {
       return date.toLocaleTimeString();
     } else {
@@ -38,9 +39,9 @@ export default function DatePicker({
     if (Platform.OS === 'android') {
       setShowPicker(false);
     }
-    
+
     if (selectedDate) {
-      onChange(selectedDate);
+      onChange(normalizeToLocalDate(selectedDate));
     }
   };
 
@@ -62,7 +63,7 @@ export default function DatePicker({
         </Text>
         <Ionicons name="calendar" size={20} color={colors.icon} />
       </TouchableOpacity>
-      
+
       {error && <Text style={[styles.error, { color: colors.error }]}>{error}</Text>}
 
       {showPicker && (
